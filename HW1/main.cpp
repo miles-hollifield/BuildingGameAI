@@ -1,28 +1,33 @@
 #include <SFML/Graphics.hpp>
-#include <SFML/System.hpp>
 #include <iostream>
+#include <vector>
+
+struct SpriteInfo {
+  sf::Sprite sprite;
+  sf::Vector2f direction; // Movement direction
+};
 
 int main() {
-  // Create the main window
-  sf::RenderWindow window(sf::VideoMode(640, 480), "Moving Sprite");
+  // Create the window
+  sf::RenderWindow window(sf::VideoMode(640, 480), "Multiple Sprites");
 
   // Load the sprite texture
   sf::Texture texture;
   if (!texture.loadFromFile("boid-sm.png")) {
-    std::cout << "Failed to load sprite texture!" << std::endl;
+    std::cout << "Failed to load texture!" << std::endl;
     return -1;
-}
+  }
 
-  // Create the sprite
-  sf::Sprite sprite(texture);
+  // List to hold multiple sprites
+  std::vector<SpriteInfo> sprites;
 
-  // Set initial position of the sprite
-  sprite.setPosition(0.f, 50.f); // Start near the top-left corner
+  // Add the first sprite
+  SpriteInfo firstSprite;
+  firstSprite.sprite.setTexture(texture);
+  firstSprite.sprite.setPosition(0.f, 50.f); // Top-left
+  firstSprite.direction = sf::Vector2f(200.f, 0.f); // Move right
+  sprites.push_back(firstSprite);
 
-  // Movement speed (pixels per second)
-  const float speed = 200.0f;
-
-  // Clock to track deltaTime
   sf::Clock clock;
 
   while (window.isOpen()) {
@@ -33,24 +38,44 @@ int main() {
         window.close();
     }
 
-    // Calculate deltaTime (time elapsed since the last frame)
+    // Calculate deltaTime
     float deltaTime = clock.restart().asSeconds();
 
-    // Update the sprite position
-    sprite.move(speed * deltaTime, 0.f); // Speed is scaled by deltaTime
+    // Update sprites
+    for (auto &info : sprites) {
+      // Move sprite
+      info.sprite.move(info.direction * deltaTime);
 
-    // Reset position if sprite moves out of bounds
-    if (sprite.getPosition().x > 640) {
-      sprite.setPosition(0.f, sprite.getPosition().y);
+      // Handle edge collisions and rotations
+      if (info.direction.x > 0 && info.sprite.getPosition().x > 640 - texture.getSize().x) { // Right edge
+        info.direction = sf::Vector2f(0.f, 200.f); // Move down
+        info.sprite.setRotation(90.f);
+      } else if (info.direction.y > 0 && info.sprite.getPosition().y > 480 - texture.getSize().y) { // Bottom edge
+        info.direction = sf::Vector2f(-200.f, 0.f); // Move left
+        info.sprite.setRotation(180.f);
+      } else if (info.direction.x < 0 && info.sprite.getPosition().x < 0) { // Left edge
+        info.direction = sf::Vector2f(0.f, -200.f); // Move up
+        info.sprite.setRotation(270.f);
+      } else if (info.direction.y < 0 && info.sprite.getPosition().y < 0) { // Top edge
+        info.direction = sf::Vector2f(200.f, 0.f); // Move right
+        info.sprite.setRotation(0.f);
+      }
     }
 
-    // Clear the screen
+    // Add a new sprite at intervals
+    if (sprites.size() < 4 && sprites.back().sprite.getPosition().x > 300) {
+      SpriteInfo newSprite;
+      newSprite.sprite.setTexture(texture);
+      newSprite.sprite.setPosition(0.f, 50.f);
+      newSprite.direction = sf::Vector2f(200.f, 0.f); // Start moving right
+      sprites.push_back(newSprite);
+    }
+
+    // Clear and draw everything
     window.clear(sf::Color::White);
-
-    // Draw the sprite
-    window.draw(sprite);
-
-    // Update the window
+    for (const auto &info : sprites) {
+      window.draw(info.sprite);
+    }
     window.display();
   }
 
