@@ -51,7 +51,7 @@ void addSprite(std::vector<SpriteInfo>& sprites, const sf::Texture& texture, sf:
 
 int main() {
   // Create the window
-  sf::RenderWindow window(sf::VideoMode(SCREEN_WIDTH, SCREEN_HEIGHT), "Multiple Sprites");
+  sf::RenderWindow window(sf::VideoMode(SCREEN_WIDTH, SCREEN_HEIGHT), "Multiple Sprites and More Complex Movement");
 
   // Load the sprite texture
   sf::Texture texture;
