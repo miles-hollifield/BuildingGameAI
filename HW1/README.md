@@ -6,7 +6,7 @@ This project demonstrates sprite movement using SFML in a VGA resolution window 
 - **Part 3**: Demonstrates coordinated movement of multiple sprites in a rectangular pattern.
 
 ## **Compilation**
-Run the following command to build the project:  
+Run the following command in the terminal once you are in the project directory to build the project:  
 ```
 make
 ```
@@ -15,13 +15,17 @@ This will produce two executables:
 - `part3`: Demonstrates Part 3 of the assignment.
 
 ## **Execution**
-- Run either of these commands to execute their respective programs:
-  - `./part2`
-  - `./part3`
+Run either of these commands to execute their respective programs:
+```
+./part2
+./part3
+```
 
 ## **Cleanup**
-- To clean the project, run this command:
-  - `make clean`
+To clean the project, run this command:
+```
+make clean
+```
 
 ## **Author**
 Miles Hollifield (mfhollif)
