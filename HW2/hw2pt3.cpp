@@ -22,17 +22,18 @@
 
 // Constants
 constexpr float MAX_SPEED = 150.0f;  // Maximum movement speed
-constexpr float WANDER_CIRCLE_RADIUS = 50.0f; // Distance for wander calculations
-constexpr float WANDER_ANGLE_CHANGE = 15.0f;  // Max angle change per update
+constexpr float WANDER_CIRCLE_DISTANCE = 50.0f; // Distance for wander calculations
+constexpr float WANDER_CIRCLE_RADIUS = 20.0f;  // Radius of the wander circle
+constexpr float WANDER_ANGLE_SMOOTHING = 3.0f; // Smaller = smoother changes
 constexpr int BREADCRUMB_LIMIT = 30; // Max breadcrumbs
-constexpr int BREADCRUMB_INTERVAL = 10; // Frames between dropping breadcrumbs
+constexpr int BREADCRUMB_INTERVAL = 60; // Frames between dropping breadcrumbs
 constexpr float SCREEN_WIDTH = 600.0f;
 constexpr float SCREEN_HEIGHT = 600.0f;
 
 // Random generator
 std::random_device rd;
 std::mt19937 rng(rd());
-std::uniform_real_distribution<float> angleChangeDist(-WANDER_ANGLE_CHANGE, WANDER_ANGLE_CHANGE);
+std::uniform_real_distribution<float> angleChangeDist(-WANDER_ANGLE_SMOOTHING, WANDER_ANGLE_SMOOTHING);
 
 // Breadcrumb class
 class Crumb {
@@ -83,28 +84,32 @@ private:
   float wanderAngle;
   std::vector<Crumb>* breadcrumbs;
 
-  // Wander Algorithm - Circle Based Approach
+  // Wander Algorithm - Smooth Circle-Based Approach
   void applyWander(float deltaTime) {
-    // Compute a point ahead of the boid
-    sf::Vector2f circleCenter = position + velocity / std::sqrt(velocity.x * velocity.x + velocity.y * velocity.y) * WANDER_CIRCLE_RADIUS;
-    
-    // Apply small random angle change
+    // Calculate wander target ahead of the boid
+    sf::Vector2f circleCenter = position + normalize(velocity) * WANDER_CIRCLE_DISTANCE;
+
+    // Adjust the wander angle gradually
     wanderAngle += angleChangeDist(rng);
 
-    // Calculate new target position using angle
+    // Compute displacement based on adjusted wander angle
     float angleRad = wanderAngle * (3.14159265f / 180.0f);
     sf::Vector2f displacement(WANDER_CIRCLE_RADIUS * std::cos(angleRad), WANDER_CIRCLE_RADIUS * std::sin(angleRad));
 
-    // Adjust velocity towards wander target
+    // Set new velocity direction towards the wander target
     sf::Vector2f wanderTarget = circleCenter + displacement;
-    velocity = wanderTarget - position;
-    float magnitude = std::sqrt(velocity.x * velocity.x + velocity.y * velocity.y);
-    velocity = (velocity / magnitude) * MAX_SPEED;
+    velocity = normalize(wanderTarget - position) * MAX_SPEED;
 
     // Update position and sprite
     position += velocity * deltaTime;
     sprite.setPosition(position);
     sprite.setRotation(std::atan2(velocity.y, velocity.x) * (180.0f / 3.14159265f));
+  }
+
+  // Normalize a vector
+  sf::Vector2f normalize(sf::Vector2f vec) {
+    float magnitude = std::sqrt(vec.x * vec.x + vec.y * vec.y);
+    return (magnitude != 0) ? sf::Vector2f(vec.x / magnitude, vec.y / magnitude) : sf::Vector2f(0, 0);
   }
 
   // Handle screen boundaries by wrapping around
