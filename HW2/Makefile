@@ -20,9 +20,12 @@ HW2PT1_SRC = hw2pt1.cpp \
 
 HW2PT2_SRC = hw2pt2.cpp
 
+HW2PT3_SRC = hw2pt3.cpp
+
 # Object Files
 HW2PT1_OBJ = $(HW2PT1_SRC:.cpp=.o)
 HW2PT2_OBJ = $(HW2PT2_SRC:.cpp=.o)
+HW2PT3_OBJ = $(HW2PT3_SRC:.cpp=.o)
 
 # Flags and Libraries
 CXXFLAGS = -std=c++17 -I./VariableMatchingSteeringBehaviors
@@ -48,7 +51,7 @@ MACOS_COMPILER=/usr/bin/clang++
 UBUNTU_COMPILER=/usr/bin/g++
 
 # Targets
-all: hw2pt1 hw2pt2
+all: hw2pt1 hw2pt2 hw2pt3
 
 uname_s := $(shell uname -s)
 
@@ -68,6 +71,14 @@ else ifeq ($(uname_s),Linux)
 	$(UBUNTU_COMPILER) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) $(UBUNTU_LIB)
 endif
 
+# Build hw2pt3
+hw2pt3: $(HW2PT3_OBJ)
+ifeq ($(uname_s),Darwin)
+	$(MACOS_COMPILER) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) $(MACOS_LIB)
+else ifeq ($(uname_s),Linux)
+	$(UBUNTU_COMPILER) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) $(UBUNTU_LIB)
+endif
+
 # Compile sources
 %.o: %.cpp
 ifeq ($(uname_s),Darwin)
@@ -79,4 +90,4 @@ endif
 # Clean Build Files
 .PHONY: clean
 clean:
-	rm -f $(HW2PT1_OBJ) $(HW2PT2_OBJ) hw2pt1 hw2pt2
+	rm -f $(HW2PT1_OBJ) $(HW2PT2_OBJ) hw2pt1 hw2pt2 hw2pt3
