@@ -1,8 +1,9 @@
 # -----------------------------------------------------------------------------
-# Makefile for Compiling and Building Homework 2, Part 1
+# Makefile for Compiling and Building Homework 2 (Parts 1 & 2)
 #
-# This Makefile builds the executable `hw2pt1`, compiling all necessary files
-# including the Variable Matching Steering Behavior implementations.
+# This Makefile builds two separate executables:
+# - `hw2pt1` for Variable Matching Steering Behaviors
+# - `hw2pt2` for Arrive and Align with Breadcrumbs
 #
 # Adapted from the sample Makefile provided by Dr. David L. Roberts.
 #
@@ -11,14 +12,17 @@
 # -----------------------------------------------------------------------------
 
 # Source Files
-HW2_SRC = hw2pt1.cpp \
-          VariableMatchingSteeringBehaviors/PositionMatching.cpp \
-          VariableMatchingSteeringBehaviors/OrientationMatching.cpp \
-          VariableMatchingSteeringBehaviors/VelocityMatching.cpp \
-          VariableMatchingSteeringBehaviors/RotationMatching.cpp
+HW2PT1_SRC = hw2pt1.cpp \
+             VariableMatchingSteeringBehaviors/PositionMatching.cpp \
+             VariableMatchingSteeringBehaviors/OrientationMatching.cpp \
+             VariableMatchingSteeringBehaviors/VelocityMatching.cpp \
+             VariableMatchingSteeringBehaviors/RotationMatching.cpp
+
+HW2PT2_SRC = hw2pt2.cpp
 
 # Object Files
-HW2_OBJ = $(HW2_SRC:.cpp=.o)
+HW2PT1_OBJ = $(HW2PT1_SRC:.cpp=.o)
+HW2PT2_OBJ = $(HW2PT2_SRC:.cpp=.o)
 
 # Flags and Libraries
 CXXFLAGS = -std=c++17 -I./VariableMatchingSteeringBehaviors
@@ -44,12 +48,20 @@ MACOS_COMPILER=/usr/bin/clang++
 UBUNTU_COMPILER=/usr/bin/g++
 
 # Targets
-all: hw2pt1
+all: hw2pt1 hw2pt2
 
 uname_s := $(shell uname -s)
 
 # Build hw2pt1
-hw2pt1: $(HW2_OBJ)
+hw2pt1: $(HW2PT1_OBJ)
+ifeq ($(uname_s),Darwin)
+	$(MACOS_COMPILER) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) $(MACOS_LIB)
+else ifeq ($(uname_s),Linux)
+	$(UBUNTU_COMPILER) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) $(UBUNTU_LIB)
+endif
+
+# Build hw2pt2
+hw2pt2: $(HW2PT2_OBJ)
 ifeq ($(uname_s),Darwin)
 	$(MACOS_COMPILER) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) $(MACOS_LIB)
 else ifeq ($(uname_s),Linux)
@@ -67,4 +79,4 @@ endif
 # Clean Build Files
 .PHONY: clean
 clean:
-	rm -f $(HW2_OBJ) hw2pt1
+	rm -f $(HW2PT1_OBJ) $(HW2PT2_OBJ) hw2pt1 hw2pt2
