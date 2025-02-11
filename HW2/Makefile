@@ -1,14 +1,16 @@
 # -----------------------------------------------------------------------------
-# Makefile for Compiling and Building Homework 2 (Parts 1 & 2)
+# Makefile for Compiling and Building Homework 2 (Parts 1, 2, 3, and 4)
 #
-# This Makefile builds two separate executables:
+# This Makefile builds four separate executables:
 # - `hw2pt1` for Variable Matching Steering Behaviors
 # - `hw2pt2` for Arrive and Align with Breadcrumbs
+# - `hw2pt3` for Wander Steering Behavior
+# - `hw2pt4` for Flocking Behavior (Boids Algorithm)
 #
 # Adapted from the sample Makefile provided by Dr. David L. Roberts.
 #
 # Author: Miles Hollifield
-# Date: 1/28/2025
+# Date: 1/29/2025
 # -----------------------------------------------------------------------------
 
 # Source Files
@@ -19,13 +21,14 @@ HW2PT1_SRC = hw2pt1.cpp \
              VariableMatchingSteeringBehaviors/RotationMatching.cpp
 
 HW2PT2_SRC = hw2pt2.cpp
-
 HW2PT3_SRC = hw2pt3.cpp
+HW2PT4_SRC = hw2pt4.cpp
 
 # Object Files
 HW2PT1_OBJ = $(HW2PT1_SRC:.cpp=.o)
 HW2PT2_OBJ = $(HW2PT2_SRC:.cpp=.o)
 HW2PT3_OBJ = $(HW2PT3_SRC:.cpp=.o)
+HW2PT4_OBJ = $(HW2PT4_SRC:.cpp=.o)
 
 # Flags and Libraries
 CXXFLAGS = -std=c++17 -I./VariableMatchingSteeringBehaviors
@@ -51,7 +54,7 @@ MACOS_COMPILER=/usr/bin/clang++
 UBUNTU_COMPILER=/usr/bin/g++
 
 # Targets
-all: hw2pt1 hw2pt2 hw2pt3
+all: hw2pt1 hw2pt2 hw2pt3 hw2pt4
 
 uname_s := $(shell uname -s)
 
@@ -79,6 +82,14 @@ else ifeq ($(uname_s),Linux)
 	$(UBUNTU_COMPILER) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) $(UBUNTU_LIB)
 endif
 
+# Build hw2pt4
+hw2pt4: $(HW2PT4_OBJ)
+ifeq ($(uname_s),Darwin)
+	$(MACOS_COMPILER) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) $(MACOS_LIB)
+else ifeq ($(uname_s),Linux)
+	$(UBUNTU_COMPILER) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) $(UBUNTU_LIB)
+endif
+
 # Compile sources
 %.o: %.cpp
 ifeq ($(uname_s),Darwin)
@@ -90,4 +101,4 @@ endif
 # Clean Build Files
 .PHONY: clean
 clean:
-	rm -f $(HW2PT1_OBJ) $(HW2PT2_OBJ) hw2pt1 hw2pt2 hw2pt3
+	rm -f $(HW2PT1_OBJ) $(HW2PT2_OBJ) $(HW2PT3_OBJ) $(HW2PT4_OBJ) hw2pt1 hw2pt2 hw2pt3 hw2pt4
