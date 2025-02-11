@@ -19,33 +19,36 @@
 #include <iostream>
 
 // Constants
-constexpr float MAX_SPEED = 200.0f; // Maximum speed
+constexpr float MAX_SPEED = 200.0f;   // Maximum movement speed
 constexpr float ARRIVAL_RADIUS = 10.0f; // Stop moving when within this range
-constexpr float SLOW_RADIUS = 100.0f; // Start slowing down
-constexpr float MAX_ROTATION = 5.0f; // Max rotation per frame
+constexpr float SLOW_RADIUS = 100.0f; // Slow down approaching target
+constexpr float MAX_ROTATION = 5.0f; // Max rotation step per frame
 constexpr float ALIGN_RADIUS = 5.0f; // Rotation threshold
-constexpr int BREADCRUMB_LIMIT = 20; // Max breadcrumbs stored
-constexpr int BREADCRUMB_INTERVAL = 5; // Frames between dropping breadcrumbs
+constexpr int BREADCRUMB_LIMIT = 50; // Max breadcrumbs stored
+constexpr int BREADCRUMB_INTERVAL = 60; // Frames between dropping breadcrumbs
 
 // Breadcrumb class
-class Crumb : public sf::CircleShape {
+class Crumb {
 public:
-  Crumb() {
-    setRadius(3.0f);
-    setFillColor(sf::Color::Blue);
-    setPosition(-100, -100); // Start off-screen
+  Crumb(sf::Vector2f pos) {
+    shape.setRadius(3.0f);
+    shape.setFillColor(sf::Color::Blue);
+    shape.setPosition(pos);
   }
 
-  void drop(sf::Vector2f position) {
-    setPosition(position);
+  void draw(sf::RenderWindow& window) const {
+    window.draw(shape);
   }
+
+private:
+  sf::CircleShape shape;
 };
 
 // Boid class
 class Boid {
 public:
-  Boid(sf::RenderWindow* w, sf::Texture& tex, std::vector<Crumb>* crumbs)
-      : window(w), breadcrumbs(crumbs) {
+  Boid(sf::RenderWindow* w, sf::Texture& tex)
+      : window(w) {
     drop_timer = BREADCRUMB_INTERVAL;
     velocity = {0, 0};
     position = {300, 300}; // Start at center
@@ -63,6 +66,9 @@ public:
   }
 
   void draw() {
+    for (const auto& crumb : breadcrumbs) {
+      crumb.draw(*window);
+    }
     window->draw(sprite);
   }
 
@@ -77,7 +83,7 @@ private:
   sf::Vector2f velocity;
   sf::Vector2f target;
   float drop_timer;
-  std::vector<Crumb>* breadcrumbs;
+  std::vector<Crumb> breadcrumbs;
 
   void applyArrive(float deltaTime) {
     sf::Vector2f desiredVelocity = target - position;
@@ -118,11 +124,10 @@ private:
   void handleBreadcrumbs() {
     if (drop_timer <= 0) {
       drop_timer = BREADCRUMB_INTERVAL;
-      breadcrumbs->push_back(Crumb());
-      breadcrumbs->back().drop(position);
+      breadcrumbs.emplace_back(position); // Add new breadcrumb
 
-      if (breadcrumbs->size() > BREADCRUMB_LIMIT) {
-        breadcrumbs->erase(breadcrumbs->begin());
+      if (breadcrumbs.size() > BREADCRUMB_LIMIT) {
+        breadcrumbs.erase(breadcrumbs.begin()); // Remove oldest breadcrumb
       }
     } else {
       drop_timer -= 1;
@@ -139,9 +144,7 @@ int main() {
     return -1;
   }
 
-  std::vector<Crumb> breadcrumbs;
-  Boid boid(&window, texture, &breadcrumbs);
-
+  Boid boid(&window, texture);
   sf::Clock clock;
 
   while (window.isOpen()) {
@@ -158,7 +161,6 @@ int main() {
 
     window.clear(sf::Color::White);
     boid.update(deltaTime);
-    for (auto& c : breadcrumbs) window.draw(c);
     boid.draw();
     window.display();
   }
