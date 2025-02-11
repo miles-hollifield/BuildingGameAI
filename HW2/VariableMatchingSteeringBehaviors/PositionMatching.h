@@ -5,12 +5,9 @@
 
 class PositionMatching : public SteeringBehavior {
 public:
-  float maxAcceleration = 100.0f; // Maximum allowed acceleration
+  float maxAcceleration = 100.0f;
 
-  SteeringData calculateAcceleration(const Kinematic& character, const Kinematic& goal) override {
-    sf::Vector2f direction = goal.position - character.position;
-    return SteeringData(direction * maxAcceleration, 0);
-  }
+  SteeringData calculateAcceleration(const Kinematic& character, const Kinematic& goal) override;
 };
 
 #endif // POSITIONMATCHING_H
