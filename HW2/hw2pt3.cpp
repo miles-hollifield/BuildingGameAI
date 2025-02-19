@@ -27,8 +27,8 @@ constexpr float WANDER_CIRCLE_RADIUS = 20.0f;  // Radius of the wander circle
 constexpr float WANDER_ANGLE_SMOOTHING = 3.0f; // Smaller = smoother changes
 constexpr int BREADCRUMB_LIMIT = 30; // Max breadcrumbs
 constexpr int BREADCRUMB_INTERVAL = 60; // Frames between dropping breadcrumbs
-constexpr float SCREEN_WIDTH = 600.0f;
-constexpr float SCREEN_HEIGHT = 600.0f;
+constexpr float SCREEN_WIDTH = 640;
+constexpr float SCREEN_HEIGHT = 480;
 
 // Random generator
 std::random_device rd;

@@ -4,6 +4,7 @@
 #include <SFML/System.hpp>
 #include <cmath>  // For fmod (to normalize orientation)
 
+// Holds Kinematic Data (Position, Velocity, Orientation, Rotation)
 struct Kinematic {
   sf::Vector2f position;
   sf::Vector2f velocity;

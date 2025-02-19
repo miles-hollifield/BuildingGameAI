@@ -13,16 +13,19 @@
 # Date: 1/29/2025
 # -----------------------------------------------------------------------------
 
-# Source Files
-HW2PT1_SRC = hw2pt1.cpp \
-             VariableMatchingSteeringBehaviors/PositionMatching.cpp \
-             VariableMatchingSteeringBehaviors/OrientationMatching.cpp \
-             VariableMatchingSteeringBehaviors/VelocityMatching.cpp \
-             VariableMatchingSteeringBehaviors/RotationMatching.cpp
+# Steering Behavior Source Files
+STEERING_SRC = source/PositionMatching.cpp \
+               source/OrientationMatching.cpp \
+               source/VelocityMatching.cpp \
+               source/RotationMatching.cpp
 
-HW2PT2_SRC = hw2pt2.cpp
-HW2PT3_SRC = hw2pt3.cpp
-HW2PT4_SRC = hw2pt4.cpp
+STEERING_OBJ = $(STEERING_SRC:.cpp=.o)
+
+# Part-Specific Source Files
+HW2PT1_SRC = hw2pt1.cpp $(STEERING_SRC)
+HW2PT2_SRC = hw2pt2.cpp $(STEERING_SRC)
+HW2PT3_SRC = hw2pt3.cpp $(STEERING_SRC)
+HW2PT4_SRC = hw2pt4.cpp $(STEERING_SRC)
 
 # Object Files
 HW2PT1_OBJ = $(HW2PT1_SRC:.cpp=.o)

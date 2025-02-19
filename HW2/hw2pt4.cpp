@@ -29,8 +29,8 @@ constexpr float NEIGHBOR_RADIUS = 100.0f;
 constexpr float SEPARATION_FORCE = 2.5f; // Increased to push apart more
 constexpr float ALIGNMENT_FORCE = 0.8f; // Reduced to prevent excessive grouping
 constexpr float COHESION_FORCE = 0.5f; // Reduced to lessen attraction to group center
-constexpr float SCREEN_WIDTH = 800.0f;
-constexpr float SCREEN_HEIGHT = 600.0f;
+constexpr float SCREEN_WIDTH = 640;
+constexpr float SCREEN_HEIGHT = 480;
 constexpr int BREADCRUMB_LIMIT = 40;
 constexpr int BREADCRUMB_INTERVAL = 10;  // Keep breadcrumbs spread out
 

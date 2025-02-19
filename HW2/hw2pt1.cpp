@@ -1,17 +1,19 @@
 #include <SFML/Graphics.hpp>
 #include <SFML/System.hpp>
 #include <iostream>
-#include "VariableMatchingSteeringBehaviors/Kinematic.h"
-#include "VariableMatchingSteeringBehaviors/PositionMatching.h"
-#include "VariableMatchingSteeringBehaviors/OrientationMatching.h"
-#include "VariableMatchingSteeringBehaviors/VelocityMatching.h"
-#include "VariableMatchingSteeringBehaviors/RotationMatching.h"
-#include "VariableMatchingSteeringBehaviors/SteeringBehavior.h"
+#include <cmath>
 
-const float WINDOW_WIDTH = 800;
-const float WINDOW_HEIGHT = 600;
+// Include necessary headers
+#include "headers/Kinematic.h"
+#include "headers/VelocityMatching.h"
 
-// Converts mouse position to velocity (helper function)
+// Constants
+constexpr float WINDOW_WIDTH = 640;
+constexpr float WINDOW_HEIGHT = 480;
+constexpr float TIME_STEP = 0.1f;  // Time step for velocity calculation
+constexpr float SPRITE_SCALE = 0.1f; // Adjust the scale for `boid.png`
+
+// Function to compute velocity from mouse movement
 sf::Vector2f getMouseVelocity(sf::Vector2f lastMousePos, sf::Vector2f currentMousePos, float deltaTime) {
   if (deltaTime > 0)
     return (currentMousePos - lastMousePos) / deltaTime;
@@ -19,29 +21,31 @@ sf::Vector2f getMouseVelocity(sf::Vector2f lastMousePos, sf::Vector2f currentMou
 }
 
 int main() {
-  sf::RenderWindow window(sf::VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT), "Variable Matching Steering Behaviors");
+  sf::RenderWindow window(sf::VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT), "Velocity Matching Behavior");
 
-  // Character Setup
-  sf::CircleShape character(20);
-  character.setFillColor(sf::Color::Blue);
-  sf::Vector2f characterPosition(100, 100);
+  // Load boid texture
+  sf::Texture boidTexture;
+  if (!boidTexture.loadFromFile("boid.png")) {
+    std::cerr << "Failed to load boid.png!" << std::endl;
+    return -1;
+  }
 
-  // Goal (Target) Setup
-  sf::CircleShape goal(10);
-  goal.setFillColor(sf::Color::Red);
-  sf::Vector2f goalPosition(WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2);
+  // Character setup (using sprite)
+  sf::Sprite character;
+  character.setTexture(boidTexture);
+  character.setScale(SPRITE_SCALE, SPRITE_SCALE);
+  character.setOrigin(boidTexture.getSize().x / 2, boidTexture.getSize().y / 2); // Center sprite
+  sf::Vector2f characterPosition(WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2);
 
-  // Mouse Position Tracking
+  // Mouse tracking
   sf::Vector2f lastMousePos = sf::Vector2f(sf::Mouse::getPosition(window));
 
   // Kinematic Objects
   Kinematic characterKinematic(characterPosition, {0, 0}, 0, 0);
-  Kinematic goalKinematic(goalPosition, {0, 0}, 0, 0);
+  Kinematic mouseKinematic(lastMousePos, {0, 0}, 0, 0);
 
-  // Steering Behaviors
-  PositionMatching positionBehavior;
-  OrientationMatching orientationBehavior;
-  VelocityMatching velocityBehavior;
+  // Velocity Matching Behavior
+  VelocityMatching velocityMatching;
 
   sf::Clock clock;
 
@@ -55,27 +59,29 @@ int main() {
     // Get delta time
     float deltaTime = clock.restart().asSeconds();
 
-    // Get Mouse Position and Velocity Matching
-    sf::Vector2f currentMousePos = sf::Vector2f(sf::Mouse::getPosition(window));
-    Kinematic mouseKinematic(currentMousePos, getMouseVelocity(lastMousePos, currentMousePos, deltaTime), 0, 0);
+    // Get Mouse Position & Compute Velocity
+    sf::Vector2f currentMousePos = static_cast<sf::Vector2f>(sf::Mouse::getPosition(window));
+    mouseKinematic.velocity = getMouseVelocity(lastMousePos, currentMousePos, deltaTime);
     lastMousePos = currentMousePos;
 
-    // Apply Steering Behaviors
-    SteeringData positionAccel = positionBehavior.calculateAcceleration(characterKinematic, goalKinematic);
-    SteeringData orientationAccel = orientationBehavior.calculateAcceleration(characterKinematic, goalKinematic);
-    SteeringData velocityAccel = velocityBehavior.calculateAcceleration(characterKinematic, mouseKinematic);
+    // Apply Velocity Matching
+    SteeringData velocityAccel = velocityMatching.calculateAcceleration(characterKinematic, mouseKinematic);
 
-    // Update Character Kinematic
+    // Update Character Kinematics
     characterKinematic.velocity += velocityAccel.linear * deltaTime;
-    characterKinematic.rotation += orientationAccel.angular * deltaTime;
     characterKinematic.update(deltaTime);
 
-    // Update SFML Shapes
+    // Update SFML Sprite
     character.setPosition(characterKinematic.position);
-    goal.setPosition(goalKinematic.position);
 
+    // Set sprite rotation based on movement direction
+    if (characterKinematic.velocity.x != 0 || characterKinematic.velocity.y != 0) {
+      float angle = std::atan2(characterKinematic.velocity.y, characterKinematic.velocity.x) * (180.0f / 3.14159265f);
+      character.setRotation(angle);
+    }
+
+    // Render
     window.clear(sf::Color::White);
-    window.draw(goal);
     window.draw(character);
     window.display();
   }
