@@ -5,9 +5,13 @@
 
 class PositionMatching : public SteeringBehavior {
 public:
-  float maxAcceleration = 100.0f;
+    float maxAcceleration, maxSpeed, targetRadius, slowRadius, timeToTarget;
 
-  SteeringData calculateAcceleration(const Kinematic& character, const Kinematic& goal) override;
+    PositionMatching(float maxAcceleration = 100.0f, float maxSpeed = 200.0f,
+                     float targetRadius = 5.0f, float slowRadius = 50.0f,
+                     float timeToTarget = 0.1f);
+
+    SteeringData calculateAcceleration(const Kinematic& character, const Kinematic& target) override;
 };
 
 #endif // POSITIONMATCHING_H

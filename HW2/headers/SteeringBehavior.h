@@ -7,10 +7,10 @@
 // Abstract Base Class for Steering Behaviors
 class SteeringBehavior {
 public:
-  virtual ~SteeringBehavior() = default;
+    virtual ~SteeringBehavior() = default;
 
-  // Pure Virtual Function for Acceleration Calculation
-  virtual SteeringData calculateAcceleration(const Kinematic& character, const Kinematic& goal) = 0;
+    // Pure Virtual Function for Acceleration Calculation
+    virtual SteeringData calculateAcceleration(const Kinematic& character, const Kinematic& target) = 0;
 };
 
 #endif // STEERINGBEHAVIOR_H

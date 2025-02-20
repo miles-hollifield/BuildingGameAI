@@ -5,9 +5,11 @@
 
 class VelocityMatching : public SteeringBehavior {
 public:
-  float timeToTarget = 0.1f;
+    float maxAcceleration, timeToTarget;
 
-  SteeringData calculateAcceleration(const Kinematic& character, const Kinematic& goal) override;
+    VelocityMatching(float maxAcceleration = 100.0f, float timeToTarget = 0.1f);
+
+    SteeringData calculateAcceleration(const Kinematic& character, const Kinematic& target) override;
 };
 
 #endif // VELOCITYMATCHING_H
