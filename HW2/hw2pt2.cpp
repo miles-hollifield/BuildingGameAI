@@ -6,15 +6,15 @@
 
 // Include necessary headers
 #include "headers/Kinematic.h"
-#include "headers/PositionMatching.h"
-#include "headers/OrientationMatching.h"
+#include "headers/Arrive.h"
+#include "headers/Align.h"
 
 // Constants
-constexpr float WINDOW_WIDTH = 640;
-constexpr float WINDOW_HEIGHT = 480;
-constexpr float SPRITE_SCALE = 0.1f;  // Adjust scale for boid.png
-constexpr int BREADCRUMB_LIMIT = 30;  // Max breadcrumbs stored
-constexpr int BREADCRUMB_INTERVAL = 5; // Frames between dropping breadcrumbs
+constexpr float WINDOW_WIDTH = 600;
+constexpr float WINDOW_HEIGHT = 600;
+constexpr float SPRITE_SCALE = 0.1f; // Adjust scale for boid.png
+constexpr int BREADCRUMB_LIMIT = 50; // Max breadcrumbs stored
+constexpr int BREADCRUMB_INTERVAL = 60; // Frames between dropping breadcrumbs
 
 // Breadcrumb class for visualizing motion history
 class Crumb {
@@ -52,11 +52,11 @@ int main() {
 
     // Kinematic Objects
     Kinematic characterKinematic(characterPosition, {0, 0}, 0, 0);
-    Kinematic targetKinematic(characterPosition, {0, 0}, 0, 0);  // Start with no target movement
+    Kinematic targetKinematic(characterPosition, {0, 0}, 0, 0); // No movement initially
 
-    // Steering Behaviors
-    PositionMatching positionMatching(200.0f, 150.0f, 5.0f, 75.0f, 0.1f);
-    OrientationMatching orientationMatching(10.0f, 180.0f, 1.0f, 20.0f, 0.1f);
+    // Steering Behaviors (Fine-tuned parameters for better control)
+    Arrive arriveBehavior(200.0f, 150.0f, 10.0f, 100.0f, 0.1f);
+    Align alignBehavior(10.0f, 180.0f, 2.0f, 30.0f, 0.1f);
 
     sf::Clock clock;
 
@@ -78,21 +78,23 @@ int main() {
         // Get delta time
         float deltaTime = clock.restart().asSeconds();
 
-        // Apply Arrive (Position Matching)
-        SteeringData positionAccel = positionMatching.calculateAcceleration(characterKinematic, targetKinematic);
-        characterKinematic.velocity += positionAccel.linear * deltaTime;
+        // Apply Arrive behavior
+        SteeringData arriveAcceleration = arriveBehavior.calculateAcceleration(characterKinematic, targetKinematic);
+        characterKinematic.velocity += arriveAcceleration.linear * deltaTime;
 
-        // Ensure stopping at target
-        if (std::sqrt(positionAccel.linear.x * positionAccel.linear.x + positionAccel.linear.y * positionAccel.linear.y) < 0.5f &&
-            std::sqrt(characterKinematic.velocity.x * characterKinematic.velocity.x + characterKinematic.velocity.y * characterKinematic.velocity.y) < 1.0f) {
+        // **Ensure stopping at target**
+        float speed = std::sqrt(characterKinematic.velocity.x * characterKinematic.velocity.x + 
+                                characterKinematic.velocity.y * characterKinematic.velocity.y);
+
+        if (speed < 0.5f) {
             characterKinematic.velocity = {0, 0};  // Stop completely if close enough
         }
 
         characterKinematic.update(deltaTime);
 
-        // Apply Align (Orientation Matching)
-        SteeringData orientationAccel = orientationMatching.calculateAcceleration(characterKinematic, targetKinematic);
-        characterKinematic.rotation += orientationAccel.angular * deltaTime;
+        // Apply Align behavior
+        SteeringData alignAcceleration = alignBehavior.calculateAcceleration(characterKinematic, targetKinematic);
+        characterKinematic.rotation += alignAcceleration.angular * deltaTime;
         characterKinematic.update(deltaTime);
 
         // Update SFML Sprite
@@ -110,7 +112,7 @@ int main() {
             breadcrumbCounter = BREADCRUMB_INTERVAL;
 
             if (breadcrumbs.size() > BREADCRUMB_LIMIT) {
-                breadcrumbs.pop_front();  // Remove oldest breadcrumb
+                breadcrumbs.pop_front(); // Remove oldest breadcrumb
             }
         }
 
