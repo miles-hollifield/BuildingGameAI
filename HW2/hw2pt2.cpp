@@ -10,8 +10,8 @@
 #include "headers/Align.h"
 
 // Constants
-constexpr float WINDOW_WIDTH = 600;
-constexpr float WINDOW_HEIGHT = 600;
+constexpr float WINDOW_WIDTH = 640;
+constexpr float WINDOW_HEIGHT = 480;
 constexpr float SPRITE_SCALE = 0.1f; // Adjust scale for boid.png
 constexpr int BREADCRUMB_LIMIT = 50; // Max breadcrumbs stored
 constexpr int BREADCRUMB_INTERVAL = 60; // Frames between dropping breadcrumbs

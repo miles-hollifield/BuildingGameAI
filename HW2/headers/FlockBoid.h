@@ -1,15 +1,15 @@
-#ifndef BOID_H
-#define BOID_H
+#ifndef FLOCKBOID_H
+#define FLOCKBOID_H
 
 #include <SFML/Graphics.hpp>
 #include <vector>
 #include <cmath>
 
-class Boid {
+class FlockBoid {
 public:
-    Boid(float x, float y, sf::Texture& texture);
+    FlockBoid(float x, float y, sf::Texture& texture);
 
-    void update(float deltaTime, const std::vector<Boid>& flock);
+    void update(float deltaTime, const std::vector<FlockBoid>& flock);
     void draw(sf::RenderWindow& window);
     
     sf::Vector2f getPosition() const { return position; }
@@ -28,12 +28,12 @@ private:
     static constexpr float ALIGNMENT_RADIUS = 50.0f;
     static constexpr float COHESION_RADIUS = 50.0f;
 
-    sf::Vector2f separate(const std::vector<Boid>& flock);
-    sf::Vector2f align(const std::vector<Boid>& flock);
-    sf::Vector2f cohere(const std::vector<Boid>& flock);
+    sf::Vector2f separate(const std::vector<FlockBoid>& flock);
+    sf::Vector2f align(const std::vector<FlockBoid>& flock);
+    sf::Vector2f cohere(const std::vector<FlockBoid>& flock);
 
     sf::Vector2f limit(sf::Vector2f vec, float max);
     sf::Vector2f normalize(sf::Vector2f vec);
 };
 
-#endif // BOID_H
+#endif // FLOCKBOID_H

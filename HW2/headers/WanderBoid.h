@@ -13,8 +13,8 @@ constexpr float WANDER_ANGLE_SMOOTHING = 3.0f;
 constexpr float ROTATION_SMOOTH_FACTOR = 0.05f;
 constexpr int BREADCRUMB_LIMIT = 30;
 constexpr int BREADCRUMB_INTERVAL = 60;
-constexpr float SCREEN_WIDTH = 600.0f;
-constexpr float SCREEN_HEIGHT = 600.0f;
+constexpr float WINDOW_WIDTH = 640;
+constexpr float WINDOW_HEIGHT = 480;
 
 // Breadcrumb class
 class Crumb {

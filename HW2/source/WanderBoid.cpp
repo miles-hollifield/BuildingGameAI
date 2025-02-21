@@ -15,7 +15,7 @@ void Crumb::draw(sf::RenderWindow& window) const {
 // WanderBoid constructor
 WanderBoid::WanderBoid(sf::RenderWindow* w, sf::Texture& tex, std::vector<Crumb>* crumbs)
     : window(w), breadcrumbs(crumbs), rng(rd()), angleChangeDist(-WANDER_ANGLE_SMOOTHING, WANDER_ANGLE_SMOOTHING) {
-    position = {SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2}; 
+    position = {WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2}; 
     velocity = {MAX_SPEED, 0};  
     wanderAngle = 0;
     orientation = 0;
@@ -72,10 +72,10 @@ sf::Vector2f WanderBoid::normalize(sf::Vector2f vec) {
 
 // Handle screen boundaries by wrapping around
 void WanderBoid::handleBoundaries() {
-    if (position.x < 0) position.x = SCREEN_WIDTH;
-    if (position.x > SCREEN_WIDTH) position.x = 0;
-    if (position.y < 0) position.y = SCREEN_HEIGHT;
-    if (position.y > SCREEN_HEIGHT) position.y = 0;
+    if (position.x < 0) position.x = WINDOW_WIDTH;
+    if (position.x > WINDOW_WIDTH) position.x = 0;
+    if (position.y < 0) position.y = WINDOW_HEIGHT;
+    if (position.y > WINDOW_HEIGHT) position.y = 0;
 }
 
 // Drop Breadcrumbs

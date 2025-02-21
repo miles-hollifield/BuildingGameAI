@@ -1,13 +1,15 @@
 #include <SFML/Graphics.hpp>
-#include "headers/Boid.h"
+#include "headers/FlockBoid.h"
 #include <iostream>
 #include <vector>
 
-constexpr int MAX_BREADCRUMBS = 30;  // Max trail length per boid
-constexpr int BREADCRUMB_INTERVAL = 10;  // Frames between dropping breadcrumbs
+constexpr int MAX_BREADCRUMBS = 15;
+constexpr int BREADCRUMB_INTERVAL = 45;
+constexpr float WINDOW_WIDTH = 640;
+constexpr float WINDOW_HEIGHT = 480;
 
 int main() {
-    sf::RenderWindow window(sf::VideoMode(800, 600), "Flocking Behavior");
+    sf::RenderWindow window(sf::VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT), "Flocking Behavior");
     sf::Texture texture;
 
     if (!texture.loadFromFile("boid.png")) {
@@ -15,14 +17,14 @@ int main() {
         return -1;
     }
 
-    std::vector<Boid> flock;
-    std::vector<std::vector<sf::CircleShape>> breadcrumbs(flock.size()); // Breadcrumbs for each boid
-    std::vector<int> breadcrumbTimers(flock.size(), 0); // Timer for each boid
+    std::vector<FlockBoid> flock;
+    std::vector<std::vector<sf::CircleShape>> breadcrumbs(flock.size());
+    std::vector<int> breadcrumbTimers(flock.size(), 0);
 
     for (int i = 0; i < 30; i++) {
         flock.emplace_back(rand() % 800, rand() % 600, texture);
-        breadcrumbs.emplace_back();  // Create an empty breadcrumb list for this boid
-        breadcrumbTimers.emplace_back(0);  // Initialize timer for this boid
+        breadcrumbs.emplace_back();  
+        breadcrumbTimers.emplace_back(0);
     }
 
     sf::Clock clock;
@@ -36,22 +38,19 @@ int main() {
         window.clear(sf::Color::White);
 
         for (size_t i = 0; i < flock.size(); i++) {
-            // Drop a breadcrumb every few frames
             breadcrumbTimers[i]++;
             if (breadcrumbTimers[i] >= BREADCRUMB_INTERVAL) {
                 breadcrumbTimers[i] = 0;
-                sf::CircleShape breadcrumb(3);  // Small breadcrumb dot
+                sf::CircleShape breadcrumb(3);
                 breadcrumb.setFillColor(sf::Color::Blue);
                 breadcrumb.setPosition(flock[i].getPosition());
                 breadcrumbs[i].push_back(breadcrumb);
 
-                // Limit breadcrumb history
                 if (breadcrumbs[i].size() > MAX_BREADCRUMBS) {
                     breadcrumbs[i].erase(breadcrumbs[i].begin());
                 }
             }
 
-            // Draw breadcrumbs before boid
             for (const auto& crumb : breadcrumbs[i]) {
                 window.draw(crumb);
             }

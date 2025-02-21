@@ -9,7 +9,7 @@
 
 // Main Function
 int main() {
-    sf::RenderWindow window(sf::VideoMode(SCREEN_WIDTH, SCREEN_HEIGHT), "Wander Behavior");
+    sf::RenderWindow window(sf::VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT), "Wander Behavior");
 
     // Load Boid Texture
     sf::Texture texture;
