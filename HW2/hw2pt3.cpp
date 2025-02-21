@@ -1,19 +1,3 @@
-/**
- * Part 3: Wander Steering Behavior
- *
- * This program demonstrates a wander algorithm using SFML.
- * - The shape moves randomly while maintaining smooth directional changes.
- * - Two different orientation methods are implemented for comparison.
- * - Breadcrumbs visualize the movement pattern.
- * - The shape handles screen boundaries gracefully.
- *
- * Resources Used:
- * - SFML Official Tutorials: https://www.sfml-dev.org/learn.php
- *
- * Author: Miles Hollifield
- * Date: 1/28/2025
- */
-
 #include <SFML/Graphics.hpp>
 #include <vector>
 #include <cmath>
@@ -25,10 +9,11 @@ constexpr float MAX_SPEED = 150.0f;  // Maximum movement speed
 constexpr float WANDER_CIRCLE_DISTANCE = 50.0f; // Distance for wander calculations
 constexpr float WANDER_CIRCLE_RADIUS = 20.0f;  // Radius of the wander circle
 constexpr float WANDER_ANGLE_SMOOTHING = 3.0f; // Smaller = smoother changes
+constexpr float ROTATION_SMOOTH_FACTOR = 0.05f; // Factor for smooth orientation
 constexpr int BREADCRUMB_LIMIT = 30; // Max breadcrumbs
 constexpr int BREADCRUMB_INTERVAL = 60; // Frames between dropping breadcrumbs
-constexpr float SCREEN_WIDTH = 640;
-constexpr float SCREEN_HEIGHT = 480;
+constexpr float SCREEN_WIDTH = 600.0f;
+constexpr float SCREEN_HEIGHT = 600.0f;
 
 // Random generator
 std::random_device rd;
@@ -60,6 +45,7 @@ public:
     position = {SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2}; // Start at center
     velocity = {MAX_SPEED, 0};  // Initially moving right
     wanderAngle = 0;
+    orientation = 0;
     sprite.setTexture(tex);
     sprite.setScale(0.1f, 0.1f);
     sprite.setOrigin(tex.getSize().x / 2, tex.getSize().y / 2);
@@ -82,6 +68,7 @@ private:
   sf::Vector2f position;
   sf::Vector2f velocity;
   float wanderAngle;
+  float orientation;
   std::vector<Crumb>* breadcrumbs;
 
   // Wander Algorithm - Smooth Circle-Based Approach
@@ -100,10 +87,15 @@ private:
     sf::Vector2f wanderTarget = circleCenter + displacement;
     velocity = normalize(wanderTarget - position) * MAX_SPEED;
 
-    // Update position and sprite
+    // Update position
     position += velocity * deltaTime;
+
+    // Update orientation based on chosen method
+    updateOrientation();
+
+    // Update sprite
     sprite.setPosition(position);
-    sprite.setRotation(std::atan2(velocity.y, velocity.x) * (180.0f / 3.14159265f));
+    sprite.setRotation(orientation);
   }
 
   // Normalize a vector
@@ -131,8 +123,20 @@ private:
       }
     }
   }
+
+  // Update Orientation - Choose ONE method
+  void updateOrientation() {
+    float targetOrientation = std::atan2(velocity.y, velocity.x) * (180.0f / 3.14159265f);
+
+    // METHOD 1: Instant Snap to Direction
+    orientation = targetOrientation;
+
+    // METHOD 2: Smooth Rotation (Uncomment this line to use)
+    // orientation += (targetOrientation - orientation) * ROTATION_SMOOTH_FACTOR;
+  }
 };
 
+// Main Function
 int main() {
   sf::RenderWindow window(sf::VideoMode(SCREEN_WIDTH, SCREEN_HEIGHT), "Wander Behavior");
   sf::Texture texture;
