@@ -56,7 +56,12 @@ int main() {
 
     // Steering Behaviors (Fine-tuned parameters for better control)
     Arrive arriveBehavior(200.0f, 150.0f, 10.0f, 100.0f, 0.1f);
+    // **METHOD 2 (ALTERNATE - Commented Out): Arrive with time-based deceleration**
+    // Arrive arriveBehavior(250.0f, 175.0f, 5.0f, 120.0f, 0.2f);
+
     Align alignBehavior(10.0f, 180.0f, 2.0f, 30.0f, 0.1f);
+    // **METHOD 2 (ALTERNATE - Commented Out): Align with direct rotation cap**
+    // Align alignBehavior(15.0f, 200.0f, 1.0f, 40.0f, 0.05f);
 
     sf::Clock clock;
 
