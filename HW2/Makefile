@@ -21,6 +21,7 @@ STEERING_SRC = source/PositionMatching.cpp \
 			   source/Align.cpp \
 			   source/Arrive.cpp \
 			   source/Wander.cpp \
+			   source/Boid.cpp \
 
 STEERING_OBJ = $(STEERING_SRC:.cpp=.o)
 
