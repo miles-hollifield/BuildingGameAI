@@ -20,7 +20,7 @@ STEERING_SRC = source/PositionMatching.cpp \
                source/RotationMatching.cpp \
 			   source/Align.cpp \
 			   source/Arrive.cpp \
-			   source/Wander.cpp \
+			   source/WanderBoid.cpp \
 			   source/Boid.cpp \
 
 STEERING_OBJ = $(STEERING_SRC:.cpp=.o)
