@@ -5,11 +5,9 @@
 
 class RotationMatching : public SteeringBehavior {
 public:
-    float maxAngularAcceleration, timeToTarget;
+  float timeToTarget = 0.1f;
 
-    RotationMatching(float maxAngularAcceleration = 5.0f, float timeToTarget = 0.1f);
-
-    SteeringData calculateAcceleration(const Kinematic& character, const Kinematic& target) override;
+  SteeringData calculateAcceleration(const Kinematic& character, const Kinematic& goal) override;
 };
 
 #endif // ROTATIONMATCHING_H

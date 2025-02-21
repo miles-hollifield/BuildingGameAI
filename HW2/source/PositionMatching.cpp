@@ -1,21 +1,15 @@
 #include "../headers/PositionMatching.h"
-#include <cmath>
 
-SteeringData PositionMatching::calculateAcceleration(const Kinematic& character, const Kinematic& target) {
-    SteeringData result;
+SteeringData PositionMatching::calculateAcceleration(const Kinematic& character, const Kinematic& goal) {
+  // Compute direction toward the target
+  sf::Vector2f direction = goal.position - character.position;
+  
+  // Normalize direction and apply max acceleration
+  float magnitude = std::sqrt(direction.x * direction.x + direction.y * direction.y);
+  if (magnitude > 0) {
+    direction /= magnitude; // Normalize
+    direction *= maxAcceleration;
+  }
 
-    // Compute the direction to the target
-    sf::Vector2f direction = target.position - character.position;
-
-    // Normalize the direction vector
-    float distance = std::sqrt(direction.x * direction.x + direction.y * direction.y);
-    if (distance > 0) {
-        direction /= distance;  // Normalize
-    }
-
-    // Apply max acceleration in that direction
-    result.linear = direction * maxAcceleration;
-
-    result.angular = 0;  // No angular acceleration in position matching
-    return result;
+  return {direction, 0.0f}; // Only linear acceleration is affected
 }
