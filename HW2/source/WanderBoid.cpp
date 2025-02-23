@@ -3,11 +3,12 @@
 
 // Breadcrumb class constructor
 Crumb::Crumb(sf::Vector2f pos) {
-    shape.setRadius(3.0f);
-    shape.setFillColor(sf::Color::Blue);
-    shape.setPosition(pos);
+    shape.setRadius(3.0f); // Set radius for the crumb
+    shape.setFillColor(sf::Color::Blue); // Set color for the crumb
+    shape.setPosition(pos); // Set position for the crumb
 }
 
+// Draws the crumb
 void Crumb::draw(sf::RenderWindow& window) const {
     window.draw(shape);
 }
@@ -15,62 +16,62 @@ void Crumb::draw(sf::RenderWindow& window) const {
 // WanderBoid constructor
 WanderBoid::WanderBoid(sf::RenderWindow* w, sf::Texture& tex, std::vector<Crumb>* crumbs)
     : window(w), breadcrumbs(crumbs), rng(rd()), angleChangeDist(-WANDER_ANGLE_SMOOTHING, WANDER_ANGLE_SMOOTHING) {
-    position = {WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2}; 
-    velocity = {MAX_SPEED, 0};  
-    wanderAngle = 0;
-    orientation = 0;
-    sprite.setTexture(tex);
-    sprite.setScale(0.1f, 0.1f);
-    sprite.setOrigin(tex.getSize().x / 2, tex.getSize().y / 2);
-    sprite.setPosition(position);
+    position = {WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2}; // Initialize position
+    velocity = {MAX_SPEED, 0}; // Initialize velocity
+    wanderAngle = 0; // Initialize wander angle
+    orientation = 0; // Initialize orientation
+    sprite.setTexture(tex); // Set texture for the sprite
+    sprite.setScale(0.1f, 0.1f); // Set scale for the sprite
+    sprite.setOrigin(tex.getSize().x / 2, tex.getSize().y / 2); // Set origin for the sprite
+    sprite.setPosition(position); // Set initial position for the sprite
 }
 
-// Update function
+// Updates the boid's position and state
 void WanderBoid::update(float deltaTime) {
-    applyWander(deltaTime);
-    handleBoundaries();
-    dropBreadcrumbs();
+    applyWander(deltaTime); // Apply wander behavior
+    handleBoundaries(); // Handle screen boundaries
+    dropBreadcrumbs(); // Drop breadcrumbs
 }
 
-// Draw function
+// Draws the boid
 void WanderBoid::draw() {
     window->draw(sprite);
 }
 
-// Wander Algorithm - Smooth Circle-Based Approach
+// Applies the wander behavior to determine the boid's movement direction
 void WanderBoid::applyWander(float deltaTime) {
-    // Calculate wander target ahead of the boid
+    // Calculate the center of the wander circle ahead of the boid
     sf::Vector2f circleCenter = position + normalize(velocity) * WANDER_CIRCLE_DISTANCE;
 
-    // Adjust the wander angle gradually
+    // Gradually adjust the wander angle with randomness
     wanderAngle += angleChangeDist(rng);
 
-    // Compute displacement based on adjusted wander angle
+    // Calculate the displacement vector based on the adjusted wander angle
     float angleRad = wanderAngle * (3.14159265f / 180.0f);
     sf::Vector2f displacement(WANDER_CIRCLE_RADIUS * std::cos(angleRad), WANDER_CIRCLE_RADIUS * std::sin(angleRad));
 
-    // Set new velocity direction towards the wander target
+    // Determine the new target velocity based on the wander target position
     sf::Vector2f wanderTarget = circleCenter + displacement;
     velocity = normalize(wanderTarget - position) * MAX_SPEED;
 
-    // Update position
+    // Update position based on velocity
     position += velocity * deltaTime;
 
-    // Update orientation based on chosen method
+    // Update orientation of the boid to face the new direction
     updateOrientation();
 
-    // Update sprite
+    // Update the position and rotation of the sprite
     sprite.setPosition(position);
     sprite.setRotation(orientation);
 }
 
-// Normalize a vector
+// Normalizes a vector to unit length
 sf::Vector2f WanderBoid::normalize(sf::Vector2f vec) {
     float magnitude = std::sqrt(vec.x * vec.x + vec.y * vec.y);
     return (magnitude != 0) ? sf::Vector2f(vec.x / magnitude, vec.y / magnitude) : sf::Vector2f(0, 0);
 }
 
-// Handle screen boundaries by wrapping around
+// Handle screen boundaries by wrapping around the edges
 void WanderBoid::handleBoundaries() {
     if (position.x < 0) position.x = WINDOW_WIDTH;
     if (position.x > WINDOW_WIDTH) position.x = 0;
@@ -82,15 +83,15 @@ void WanderBoid::handleBoundaries() {
 void WanderBoid::dropBreadcrumbs() {
     static int dropTimer = BREADCRUMB_INTERVAL;
     if (--dropTimer <= 0) {
-        breadcrumbs->push_back(Crumb(position));
+        breadcrumbs->push_back(Crumb(position)); // Drop a breadcrumb at the current position
         dropTimer = BREADCRUMB_INTERVAL;
         if (breadcrumbs->size() > BREADCRUMB_LIMIT) {
-            breadcrumbs->erase(breadcrumbs->begin());
+            breadcrumbs->erase(breadcrumbs->begin()); // Remove the oldest breadcrumb if limit exceeded
         }
     }
 }
 
-// Update Orientation - Choose ONE method
+// Updates the boid's orientation to face its movement direction
 void WanderBoid::updateOrientation() {
     float targetOrientation = std::atan2(velocity.y, velocity.x) * (180.0f / 3.14159265f);
 

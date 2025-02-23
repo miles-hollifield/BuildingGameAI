@@ -1,3 +1,16 @@
+/**
+ * @file hw2pt2.cpp
+ * @brief Implements the Arrive and Align steering behaviors with breadcrumb visualization and mouse clicks.
+ *
+ * Resources Used:
+ * - SFML Official Tutorials: https://www.sfml-dev.org/learn.php
+ * - Book: "Artificial Intelligence for Games" by Ian Millington
+ * - File: Provided Breadcrumb class from TA Derek Martin
+ *
+ * Author: Miles Hollifield
+ * Date: 2/23/2025
+ */
+
 #include <SFML/Graphics.hpp>
 #include <SFML/System.hpp>
 #include <iostream>
@@ -10,31 +23,34 @@
 #include "headers/Align.h"
 
 // Constants
-constexpr float WINDOW_WIDTH = 640;
-constexpr float WINDOW_HEIGHT = 480;
-constexpr float SPRITE_SCALE = 0.1f; // Adjust scale for boid.png
+constexpr float WINDOW_WIDTH = 640; // Window width
+constexpr float WINDOW_HEIGHT = 480; // Window height
+constexpr float SPRITE_SCALE = 0.1f; // Scale adjustment for boid character
 constexpr int BREADCRUMB_LIMIT = 50; // Max breadcrumbs stored
 constexpr int BREADCRUMB_INTERVAL = 60; // Frames between dropping breadcrumbs
 
 // Breadcrumb class for visualizing motion history
 class Crumb {
 public:
+    // Constructor
     Crumb(sf::Vector2f pos) {
         shape.setRadius(3.0f);
         shape.setFillColor(sf::Color::Blue);
         shape.setPosition(pos);
     }
 
+    // Draw crumb
     void draw(sf::RenderWindow& window) const {
         window.draw(shape);
     }
 
 private:
-    sf::CircleShape shape;
+    sf::CircleShape shape; // Circle shape representing the breadcrumb
 };
 
 int main() {
-    sf::RenderWindow window(sf::VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT), "Arrive & Align Behavior");
+    // Create an SFML window
+    sf::RenderWindow window(sf::VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT), "Part 2: Arrive and Align");
 
     // Load Boid Texture
     sf::Texture boidTexture;
@@ -43,24 +59,33 @@ int main() {
         return -1;
     }
 
-    // Character setup (using sprite)
+    // Character setup
     sf::Sprite character;
     character.setTexture(boidTexture);
     character.setScale(SPRITE_SCALE, SPRITE_SCALE);
-    character.setOrigin(boidTexture.getSize().x / 2, boidTexture.getSize().y / 2); // Center sprite
+    character.setOrigin(boidTexture.getSize().x / 2, boidTexture.getSize().y / 2);
     sf::Vector2f characterPosition(WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2);
 
-    // Kinematic Objects
+    // Initialize kinematic objects
     Kinematic characterKinematic(characterPosition, {0, 0}, 0, 0);
     Kinematic targetKinematic(characterPosition, {0, 0}, 0, 0); // No movement initially
 
-    // Steering Behaviors (Fine-tuned parameters for better control)
-    Arrive arriveBehavior(200.0f, 150.0f, 10.0f, 100.0f, 0.1f);
-    // **METHOD 2 (ALTERNATE - Commented Out): Arrive with time-based deceleration**
-    // Arrive arriveBehavior(250.0f, 175.0f, 5.0f, 120.0f, 0.2f);
+    // Initialize steering behaviors
 
+    /* METHOD 1:
+     * Faster approach with quick deceleration:
+     * - Arrive: max acceleration 200, max speed 150, target radius 10, slow radius 100, timeToTarget 0.1
+     * - Align: max angular acceleration 10, max rotation 180, target radius 2, slow radius 30
+     */
+    Arrive arriveBehavior(200.0f, 150.0f, 10.0f, 100.0f, 0.1f);
     Align alignBehavior(10.0f, 180.0f, 2.0f, 30.0f, 0.1f);
-    // **METHOD 2 (ALTERNATE - Commented Out): Align with direct rotation cap**
+
+    /* METHOD 2 (ALTERNATE - Commented Out):
+     * Smoother, gradual approach and alignment:
+     * - Arrive: max acceleration 250, max speed 175, target radius 5, slow radius 120, timeToTarget 0.2
+     * - Align: max angular acceleration 15, max rotation 200, target radius 1, slow radius 40
+     */
+    // Arrive arriveBehavior(250.0f, 175.0f, 5.0f, 120.0f, 0.2f);
     // Align alignBehavior(15.0f, 200.0f, 1.0f, 40.0f, 0.05f);
 
     sf::Clock clock;
@@ -73,7 +98,7 @@ int main() {
         sf::Event event;
         while (window.pollEvent(event)) {
             if (event.type == sf::Event::Closed)
-                window.close();
+                window.close(); // Close window
             else if (event.type == sf::Event::MouseButtonPressed) {
                 // Set the target position when the mouse is clicked
                 targetKinematic.position = static_cast<sf::Vector2f>(sf::Mouse::getPosition(window));
@@ -87,7 +112,7 @@ int main() {
         SteeringData arriveAcceleration = arriveBehavior.calculateAcceleration(characterKinematic, targetKinematic);
         characterKinematic.velocity += arriveAcceleration.linear * deltaTime;
 
-        // **Ensure stopping at target**
+        // Make sure character stops near target
         float speed = std::sqrt(characterKinematic.velocity.x * characterKinematic.velocity.x + 
                                 characterKinematic.velocity.y * characterKinematic.velocity.y);
 
@@ -102,7 +127,7 @@ int main() {
         characterKinematic.rotation += alignAcceleration.angular * deltaTime;
         characterKinematic.update(deltaTime);
 
-        // Update SFML Sprite
+        // Update the sprite position
         character.setPosition(characterKinematic.position);
 
         // Set sprite rotation based on movement direction
@@ -124,9 +149,9 @@ int main() {
         // Render
         window.clear(sf::Color::White);
         for (const auto& crumb : breadcrumbs) {
-            crumb.draw(window);
+            crumb.draw(window); // Draw each breadcrumb
         }
-        window.draw(character);
+        window.draw(character); // Draw the character sprite
         window.display();
     }
 

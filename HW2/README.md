@@ -12,7 +12,7 @@ Run the following command in the terminal once you are in the project directory 
 ```
 make
 ```
-This will produce two executables:
+This will produce four executables:
 - `hw2pt1`: Demonstrates Part 1 of the assignment.
 - `hw2pt2`: Demonstrates Part 2 of the assignment.
 - `hw2pt3`: Demonstrates Part 3 of the assignment.
