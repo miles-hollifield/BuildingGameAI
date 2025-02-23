@@ -73,20 +73,20 @@ int main() {
     // Initialize steering behaviors
 
     /* METHOD 1:
-     * Faster approach with quick deceleration:
+     * Smoother, gradual approach and alignment:
      * - Arrive: max acceleration 200, max speed 150, target radius 10, slow radius 100, timeToTarget 0.1
      * - Align: max angular acceleration 10, max rotation 180, target radius 2, slow radius 30
      */
-    Arrive arriveBehavior(200.0f, 150.0f, 10.0f, 100.0f, 0.1f);
-    Align alignBehavior(10.0f, 180.0f, 2.0f, 30.0f, 0.1f);
+    // Arrive arriveBehavior(200.0f, 150.0f, 10.0f, 100.0f, 0.1f);
+    // Align alignBehavior(10.0f, 180.0f, 2.0f, 30.0f, 0.1f);
 
     /* METHOD 2 (ALTERNATE - Commented Out):
-     * Smoother, gradual approach and alignment:
+     * Faster approach with quick deceleration:
      * - Arrive: max acceleration 250, max speed 175, target radius 5, slow radius 120, timeToTarget 0.2
      * - Align: max angular acceleration 15, max rotation 200, target radius 1, slow radius 40
      */
-    // Arrive arriveBehavior(250.0f, 175.0f, 5.0f, 120.0f, 0.2f);
-    // Align alignBehavior(15.0f, 200.0f, 1.0f, 40.0f, 0.05f);
+    Arrive arriveBehavior(250.0f, 175.0f, 5.0f, 120.0f, 0.2f);
+    Align alignBehavior(15.0f, 200.0f, 1.0f, 40.0f, 0.05f);
 
     sf::Clock clock;
 
