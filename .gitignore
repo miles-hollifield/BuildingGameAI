@@ -1,18 +1,49 @@
 # Ignore object files and executables
 *.o
+*.out
+*.exe
+*.a
+*.so
+*.dll
+
+# Ignore compiled binaries
+hw2pt1
+hw2pt2
+hw2pt3
+hw2pt4
 part2
 part3
 
 # Ignore dependency files
 *.d
+*.dep
+*.log
 
-# Ignore editor settings and temporary files
-.vscode/
+# Ignore debugging and core dumps
+*.gch
+*.gcda
+*.gcno
+*.gcov
 *.swp
-*~
+*.swo
+*.bak
 *.tmp
-.DS_Store
+core
+vgcore.*
 
-# Ignore build directory (if applicable)
+# Ignore build artifacts
 build/
 bin/
+cmake-build-debug/
+cmake-build-release/
+CMakeFiles/
+CMakeCache.txt
+CMakeLists.txt.user
+
+# Ignore IDE and editor settings
+.vscode/
+.idea/
+
+# Ignore macOS and Windows system files
+.DS_Store
+Thumbs.db
