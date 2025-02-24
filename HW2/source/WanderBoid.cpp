@@ -95,7 +95,7 @@ void WanderBoid::dropBreadcrumbs() {
  * The following prompt was used: "Give me suggestions for different methods of changing the boid's 
  * orientation to match its movement direction."
  */
-*/
+
 // Updates the boid's orientation to face its movement direction
 void WanderBoid::updateOrientation() {
     float targetOrientation = std::atan2(velocity.y, velocity.x) * (180.0f / 3.14159265f);
