@@ -42,6 +42,11 @@ void FlockBoid::draw(sf::RenderWindow& window) {
     window.draw(sprite);
 }
 
+/** OpenAI's ChatGPT was used to suggest implementations for FlockBoid's separate, align, and cohere
+ * functionality. The following prompt was used: "Create the methods for a flocking boid that implements
+ * separation, alignment, and cohesion behaviors in C++." The code provided by ChatGPT was modified
+ * to fit the context of the project.
+ */
 // Separation behavior calculates a force to keep boids apart
 sf::Vector2f FlockBoid::separate(const std::vector<FlockBoid>& flock) {
     sf::Vector2f steer(0, 0);
@@ -114,6 +119,8 @@ sf::Vector2f FlockBoid::cohere(const std::vector<FlockBoid>& flock) {
     // If no neighbors, return zero steering force
     return sf::Vector2f(0, 0);
 }
+
+/** End ChatGPT citation */
 
 // Utility function to limit the magnitude of a vector
 sf::Vector2f FlockBoid::limit(sf::Vector2f vec, float max) {

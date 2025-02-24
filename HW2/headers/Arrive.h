@@ -5,9 +5,15 @@
  * Resources Used:
  * - SFML Official Tutorials: https://www.sfml-dev.org/learn.php
  * - Book: "Artificial Intelligence for Games" by Ian Millington
+ * - AI Tools: OpenAI's ChatGPT
  *
  * Author: Miles Hollifield
  * Date: 2/23/2025
+ */
+
+/** OpenAI's ChatGPT was used to suggest a template header file for Arrive's
+ * implementation. The following prompt was used: "Create a template header file 
+ * for a class that implements Arrive behavior in C++."
  */
 
 #ifndef ARRIVE_H
@@ -49,3 +55,5 @@ public:
 };
 
 #endif // ARRIVE_H
+
+/** End ChatGPT citation */

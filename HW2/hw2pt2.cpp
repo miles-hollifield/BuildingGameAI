@@ -6,6 +6,7 @@
  * - SFML Official Tutorials: https://www.sfml-dev.org/learn.php
  * - Book: "Artificial Intelligence for Games" by Ian Millington
  * - File: Provided Breadcrumb class from TA Derek Martin
+ * - AI Tools: OpenAI's ChatGPT
  *
  * Author: Miles Hollifield
  * Date: 2/23/2025
@@ -72,6 +73,11 @@ int main() {
 
     // Initialize steering behaviors
 
+    /** OpenAI's ChatGPT was used below to suggest different methods for Align and Arrive.
+     * The prompt I used was the following: "Give me suggestions for different methods of
+     * Arrive and Align steering behaviors. Include parameters for each method."
+     */
+
     /* METHOD 1:
      * Smoother, gradual approach and alignment:
      * - Arrive: max acceleration 200, max speed 150, target radius 10, slow radius 100, timeToTarget 0.1
@@ -87,6 +93,8 @@ int main() {
      */
     Arrive arriveBehavior(250.0f, 175.0f, 5.0f, 120.0f, 0.2f);
     Align alignBehavior(15.0f, 200.0f, 1.0f, 40.0f, 0.05f);
+
+    /** End ChatGPT citation */
 
     sf::Clock clock;
 

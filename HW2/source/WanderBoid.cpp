@@ -91,6 +91,11 @@ void WanderBoid::dropBreadcrumbs() {
     }
 }
 
+/** OpenAI's ChatGPT was used to suggest different methods for changing the boid's orientation. 
+ * The following prompt was used: "Give me suggestions for different methods of changing the boid's 
+ * orientation to match its movement direction."
+ */
+*/
 // Updates the boid's orientation to face its movement direction
 void WanderBoid::updateOrientation() {
     float targetOrientation = std::atan2(velocity.y, velocity.x) * (180.0f / 3.14159265f);
@@ -101,3 +106,5 @@ void WanderBoid::updateOrientation() {
     // METHOD 2: Smooth Rotation (Uncomment this line to use)
     // orientation += (targetOrientation - orientation) * ROTATION_SMOOTH_FACTOR;
 }
+
+/** End ChatGPT citation */
