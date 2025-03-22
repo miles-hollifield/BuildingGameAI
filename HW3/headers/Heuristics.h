@@ -14,8 +14,17 @@
  #include <vector>
  #include <SFML/System/Vector2.hpp>
  #include <algorithm>
+ #include <unordered_map>
  
  namespace Heuristics {
+     
+     // Helper struct for unordered_map of pairs
+     struct PairHash {
+         template <class T1, class T2>
+         std::size_t operator() (const std::pair<T1, T2>& pair) const {
+             return std::hash<T1>()(pair.first) ^ std::hash<T2>()(pair.second);
+         }
+     };
      
      /**
       * @brief Euclidean distance heuristic (admissible and consistent).
@@ -59,8 +68,7 @@
       */
      inline float cluster(int current, int goal, const Graph& graph, 
                          const std::unordered_map<int, int>& clusters,
-                         const std::unordered_map<std::pair<int, int>, float, 
-                         PairHash>& clusterDistances) {
+                         const std::unordered_map<std::pair<int, int>, float, PairHash>& clusterDistances) {
          
          // If vertices are in the same cluster, use Euclidean distance
          if (clusters.at(current) == clusters.at(goal)) {
@@ -132,14 +140,6 @@
          // Return the maximum of biased and euclidean to ensure inadmissibility
          return std::max(biasedDist, euclideanDist * 1.1f);
      }
-     
-     // Helper struct for unordered_map of pairs
-     struct PairHash {
-         template <class T1, class T2>
-         std::size_t operator() (const std::pair<T1, T2>& pair) const {
-             return std::hash<T1>()(pair.first) ^ std::hash<T2>()(pair.second);
-         }
-     };
  };
  
  #endif // HEURISTICS_H

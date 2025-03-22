@@ -9,20 +9,20 @@
 
 # Source Files by Component
 MAIN_SRC = hw3.cpp
-SMALL_GRAPH_SRC = SmallGraph.cpp
-LARGE_GRAPH_SRC = LargeGraph.cpp
+SMALL_GRAPH_SRC = source/SmallGraph.cpp
+# LARGE_GRAPH_SRC = source/LargeGraph.cpp
 
-# Source files from HW2 needed for path following
-HW2_SRC = HW2/source/Arrive.cpp HW2/source/Align.cpp
+# Source files for path following behaviors
+BEHAVIOR_SRC = source/Arrive.cpp source/Align.cpp
 
 # Object files
 MAIN_OBJ = $(MAIN_SRC:.cpp=.o)
 SMALL_GRAPH_OBJ = $(SMALL_GRAPH_SRC:.cpp=.o)
-LARGE_GRAPH_OBJ = $(LARGE_GRAPH_SRC:.cpp=.o)
-HW2_OBJ = $(HW2_SRC:.cpp=.o)
+# LARGE_GRAPH_OBJ = $(LARGE_GRAPH_SRC:.cpp=.o)
+BEHAVIOR_OBJ = $(BEHAVIOR_SRC:.cpp=.o)
 
 # Flags and Libraries
-CXXFLAGS = -std=c++17 -I. -IHW2/
+CXXFLAGS = -std=c++17 -I. -Iheaders
 LDFLAGS = -lsfml-graphics -lsfml-window -lsfml-system
 
 # Platform-Specific Include and Library Paths
@@ -45,12 +45,12 @@ MACOS_COMPILER=/usr/bin/clang++
 UBUNTU_COMPILER=/usr/bin/g++
 
 # Targets
-all: hw3 small_graph large_graph
+all: hw3 small_graph
 
 uname_s := $(shell uname -s)
 
 # Build main application
-hw3: $(MAIN_OBJ) $(HW2_OBJ)
+hw3: $(MAIN_OBJ) $(BEHAVIOR_OBJ)
 ifeq ($(uname_s),Darwin)
 	$(MACOS_COMPILER) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) $(MACOS_LIB)
 else ifeq ($(uname_s),Linux)
@@ -66,12 +66,12 @@ else ifeq ($(uname_s),Linux)
 endif
 
 # Build large graph test
-large_graph: $(LARGE_GRAPH_OBJ)
-ifeq ($(uname_s),Darwin)
-	$(MACOS_COMPILER) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) $(MACOS_LIB)
-else ifeq ($(uname_s),Linux)
-	$(UBUNTU_COMPILER) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) $(UBUNTU_LIB)
-endif
+# large_graph: $(LARGE_GRAPH_OBJ)
+# ifeq ($(uname_s),Darwin)
+# 	$(MACOS_COMPILER) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) $(MACOS_LIB)
+# else ifeq ($(uname_s),Linux)
+# 	$(UBUNTU_COMPILER) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) $(UBUNTU_LIB)
+# endif
 
 # Compile sources
 %.o: %.cpp
@@ -84,4 +84,4 @@ endif
 # Clean Build Files
 .PHONY: clean
 clean:
-	rm -f $(MAIN_OBJ) $(SMALL_GRAPH_OBJ) $(LARGE_GRAPH_OBJ) $(HW2_OBJ) hw3 small_graph large_graph
+	rm -f $(MAIN_OBJ) $(SMALL_GRAPH_OBJ) $(BEHAVIOR_OBJ) hw3 small_graph

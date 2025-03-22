@@ -64,6 +64,22 @@
          for (int r = 0; r < rows; r++) {
              for (int c = 0; c < cols; c++) {
                  int idx = r * cols + c;
+                 sf::Vector2f pos((c + 0.5f) * gridSize, (r + 0.5f) * gridSize);
+                 positions.push_back(pos);
+                 vertexPositions.push_back(pos);
+             }
+         }
+         
+         // Store positions in graph
+         graph.setVertexPositions(positions);
+         
+         // Define direction arrays for 8-connected grid
+         const int dx[] = {-1, 0, 1, 0, -1, -1, 1, 1}; 
+         const int dy[] = {0, -1, 0, 1, -1, 1, -1, 1};
+         
+         for (int r = 0; r < rows; r++) {
+             for (int c = 0; c < cols; c++) {
+                 int idx = r * cols + c;
                  sf::Vector2f pos = positions[idx];
                  
                  // Skip if current position is inside an obstacle

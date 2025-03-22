@@ -12,6 +12,7 @@
  #include <iostream>
  #include <unordered_set>
  #include <string>
+ #include <cmath>
  
  /**
   * @brief Creates a large random graph with specified parameters.

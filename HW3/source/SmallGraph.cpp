@@ -9,11 +9,16 @@
  * Date: 3/20/2025
  */
 
- #include "headers/Graph.h"
+ #include "../headers/Graph.h"
+ #include "../headers/Dijkstra.h"
+ #include "../headers/AStar.h"
+ #include "../headers/Heuristics.h"
  #include <SFML/Graphics.hpp>
  #include <string>
  #include <vector>
  #include <iostream>
+ #include <cmath>
+ #include <chrono>
  
  /**
   * @brief Creates a graph representing a simplified map of NCSU campus.
@@ -169,6 +174,163 @@
  }
  
  /**
+  * @brief Run tests with different pathfinding algorithms on the campus graph.
+  * @param graph The graph to test on.
+  * @param locationNames Names of the locations (for reporting).
+  */
+ void testPathfinding(const Graph& graph, const std::vector<std::string>& locationNames) {
+     // Create pathfinding algorithms
+     Dijkstra dijkstra;
+     
+     // A* with Euclidean distance heuristic (admissible and consistent)
+     AStar astarEuclidean([](int current, int goal, const Graph& g) {
+         return Heuristics::euclidean(current, goal, g);
+     });
+     
+     // A* with Manhattan distance heuristic (admissible)
+     AStar astarManhattan([](int current, int goal, const Graph& g) {
+         return Heuristics::manhattan(current, goal, g);
+     });
+     
+     // A* with inadmissible heuristic (overestimates)
+     AStar astarInadmissible([](int current, int goal, const Graph& g) {
+         return Heuristics::inadmissible(current, goal, g);
+     });
+     
+     // Define test cases (source, destination)
+     std::vector<std::pair<int, int>> testCases = {
+         {0, 17},   // Talley Student Union to Hunt Library
+         {18, 6},   // Bell Tower to Engineering Building III
+         {14, 3},   // Reynolds Coliseum to Cox Hall
+         {15, 9},   // Carmichael Gym to Mann Hall
+         {5, 12}    // Engineering Building II to Textiles Complex
+     };
+     
+     // Run tests for each test case
+     std::cout << "=====================================================" << std::endl;
+     std::cout << "PATHFINDING TEST RESULTS - NCSU CAMPUS GRAPH" << std::endl;
+     std::cout << "=====================================================" << std::endl;
+     
+     for (const auto& testCase : testCases) {
+         int source = testCase.first;
+         int dest = testCase.second;
+         
+         std::cout << "\nTest: " << locationNames[source] << " to " << locationNames[dest] << std::endl;
+         std::cout << "-----------------------------------------------------" << std::endl;
+         
+         // Run Dijkstra's algorithm
+         auto startTime = std::chrono::high_resolution_clock::now();
+         std::vector<int> dijkstraPath = dijkstra.findPath(graph, source, dest);
+         auto endTime = std::chrono::high_resolution_clock::now();
+         std::chrono::duration<double, std::milli> dijkstraTime = endTime - startTime;
+         
+         // Report Dijkstra results
+         std::cout << "Dijkstra:" << std::endl;
+         std::cout << "  Path length: " << dijkstraPath.size() << " vertices" << std::endl;
+         std::cout << "  Path cost: " << dijkstra.getPathCost() << std::endl;
+         std::cout << "  Nodes explored: " << dijkstra.getNodesExplored() << std::endl;
+         std::cout << "  Max fringe size: " << dijkstra.getMaxFringeSize() << std::endl;
+         std::cout << "  Execution time: " << dijkstraTime.count() << " ms" << std::endl;
+         std::cout << "  Path: ";
+         for (size_t i = 0; i < dijkstraPath.size(); i++) {
+             std::cout << locationNames[dijkstraPath[i]];
+             if (i < dijkstraPath.size() - 1) {
+                 std::cout << " -> ";
+             }
+         }
+         std::cout << std::endl;
+         
+         // Run A* with Euclidean heuristic
+         startTime = std::chrono::high_resolution_clock::now();
+         std::vector<int> astarEuclideanPath = astarEuclidean.findPath(graph, source, dest);
+         endTime = std::chrono::high_resolution_clock::now();
+         std::chrono::duration<double, std::milli> astarEuclideanTime = endTime - startTime;
+         
+         // Report A* Euclidean results
+         std::cout << "\nA* (Euclidean):" << std::endl;
+         std::cout << "  Path length: " << astarEuclideanPath.size() << " vertices" << std::endl;
+         std::cout << "  Path cost: " << astarEuclidean.getPathCost() << std::endl;
+         std::cout << "  Nodes explored: " << astarEuclidean.getNodesExplored() << std::endl;
+         std::cout << "  Max fringe size: " << astarEuclidean.getMaxFringeSize() << std::endl;
+         std::cout << "  Execution time: " << astarEuclideanTime.count() << " ms" << std::endl;
+         std::cout << "  Path: ";
+         for (size_t i = 0; i < astarEuclideanPath.size(); i++) {
+             std::cout << locationNames[astarEuclideanPath[i]];
+             if (i < astarEuclideanPath.size() - 1) {
+                 std::cout << " -> ";
+             }
+         }
+         std::cout << std::endl;
+         
+         // Run A* with Manhattan heuristic
+         startTime = std::chrono::high_resolution_clock::now();
+         std::vector<int> astarManhattanPath = astarManhattan.findPath(graph, source, dest);
+         endTime = std::chrono::high_resolution_clock::now();
+         std::chrono::duration<double, std::milli> astarManhattanTime = endTime - startTime;
+         
+         // Report A* Manhattan results
+         std::cout << "\nA* (Manhattan):" << std::endl;
+         std::cout << "  Path length: " << astarManhattanPath.size() << " vertices" << std::endl;
+         std::cout << "  Path cost: " << astarManhattan.getPathCost() << std::endl;
+         std::cout << "  Nodes explored: " << astarManhattan.getNodesExplored() << std::endl;
+         std::cout << "  Max fringe size: " << astarManhattan.getMaxFringeSize() << std::endl;
+         std::cout << "  Execution time: " << astarManhattanTime.count() << " ms" << std::endl;
+         std::cout << "  Path: ";
+         for (size_t i = 0; i < astarManhattanPath.size(); i++) {
+             std::cout << locationNames[astarManhattanPath[i]];
+             if (i < astarManhattanPath.size() - 1) {
+                 std::cout << " -> ";
+             }
+         }
+         std::cout << std::endl;
+         
+         // Run A* with Inadmissible heuristic
+         startTime = std::chrono::high_resolution_clock::now();
+         std::vector<int> astarInadmissiblePath = astarInadmissible.findPath(graph, source, dest);
+         endTime = std::chrono::high_resolution_clock::now();
+         std::chrono::duration<double, std::milli> astarInadmissibleTime = endTime - startTime;
+         
+         // Report A* Inadmissible results
+         std::cout << "\nA* (Inadmissible):" << std::endl;
+         std::cout << "  Path length: " << astarInadmissiblePath.size() << " vertices" << std::endl;
+         std::cout << "  Path cost: " << astarInadmissible.getPathCost() << std::endl;
+         std::cout << "  Nodes explored: " << astarInadmissible.getNodesExplored() << std::endl;
+         std::cout << "  Max fringe size: " << astarInadmissible.getMaxFringeSize() << std::endl;
+         std::cout << "  Execution time: " << astarInadmissibleTime.count() << " ms" << std::endl;
+         std::cout << "  Path: ";
+         for (size_t i = 0; i < astarInadmissiblePath.size(); i++) {
+             std::cout << locationNames[astarInadmissiblePath[i]];
+             if (i < astarInadmissiblePath.size() - 1) {
+                 std::cout << " -> ";
+             }
+         }
+         std::cout << std::endl;
+         
+         // Check if paths are optimal
+         bool euclideanOptimal = (astarEuclidean.getPathCost() == dijkstra.getPathCost());
+         bool manhattanOptimal = (astarManhattan.getPathCost() == dijkstra.getPathCost());
+         bool inadmissibleOptimal = (astarInadmissible.getPathCost() == dijkstra.getPathCost());
+         
+         std::cout << "\nPath Optimality:" << std::endl;
+         std::cout << "  A* (Euclidean): " << (euclideanOptimal ? "Optimal" : "NOT Optimal") << std::endl;
+         std::cout << "  A* (Manhattan): " << (manhattanOptimal ? "Optimal" : "NOT Optimal") << std::endl;
+         std::cout << "  A* (Inadmissible): " << (inadmissibleOptimal ? "Optimal" : "NOT Optimal") << std::endl;
+         
+         // Compare node exploration
+         double euclideanEfficiency = (double)astarEuclidean.getNodesExplored() / dijkstra.getNodesExplored() * 100.0;
+         double manhattanEfficiency = (double)astarManhattan.getNodesExplored() / dijkstra.getNodesExplored() * 100.0;
+         double inadmissibleEfficiency = (double)astarInadmissible.getNodesExplored() / dijkstra.getNodesExplored() * 100.0;
+         
+         std::cout << "\nExploration Efficiency (% of Dijkstra's nodes explored):" << std::endl;
+         std::cout << "  A* (Euclidean): " << euclideanEfficiency << "%" << std::endl;
+         std::cout << "  A* (Manhattan): " << manhattanEfficiency << "%" << std::endl;
+         std::cout << "  A* (Inadmissible): " << inadmissibleEfficiency << "%" << std::endl;
+         
+         std::cout << "-----------------------------------------------------" << std::endl;
+     }
+ }
+ 
+ /**
   * @brief Visualize the campus graph using SFML.
   * @param graph The graph to visualize.
   * @param locationNames Vector of location names for each vertex.
@@ -176,13 +338,15 @@
  void visualizeCampusGraph(const Graph& graph, const std::vector<std::string>& locationNames) {
      // Create window
      sf::RenderWindow window(sf::VideoMode(800, 600), "NCSU Campus Graph");
-     
+
      // Create font for text display
-     sf::Font font;
-     if (!font.loadFromFile("arial.ttf")) {
-         std::cerr << "Error loading font!" << std::endl;
-         return;
-     }
+    sf::Font font;
+    bool fontLoaded = false;
+
+    // Try common system fonts
+    if (font.loadFromFile("ARIAL.ttf")) {
+        fontLoaded = true;
+    }
      
      // Create shapes for vertices and edges
      std::vector<sf::CircleShape> vertices;
@@ -192,18 +356,20 @@
      // Set up vertices
      for (int i = 0; i < graph.size(); i++) {
          sf::Vector2f pos = graph.getVertexPosition(i);
+
+         // Create label text
+        if (fontLoaded) {
+            sf::Text label(locationNames[i], font, 12);
+            label.setPosition(pos + sf::Vector2f(-30, 12));
+            label.setFillColor(sf::Color::Black);
+            labels.push_back(label);
+        }
          
          // Create vertex circle
          sf::CircleShape vertex(10);
          vertex.setPosition(pos - sf::Vector2f(10, 10)); // Center circle on position
          vertex.setFillColor(sf::Color::Blue);
          vertices.push_back(vertex);
-         
-         // Create label text
-         sf::Text label(locationNames[i], font, 12);
-         label.setPosition(pos + sf::Vector2f(12, -6));
-         label.setFillColor(sf::Color::Black);
-         labels.push_back(label);
      }
      
      // Set up edges
@@ -228,23 +394,79 @@
                  edgeShape.setRotation(std::atan2(direction.y, direction.x) * 180 / 3.14159265f);
                  edgeShape.setFillColor(sf::Color(100, 100, 100, 150));
                  edges.push_back(edgeShape);
-                 
-                 // Add weight label on edge
-                 sf::Text weightLabel(std::to_string(static_cast<int>(weight)), font, 12);
-                 sf::Vector2f midpoint = from + (to - from) * 0.5f;
-                 weightLabel.setPosition(midpoint);
-                 weightLabel.setFillColor(sf::Color::Red);
-                 labels.push_back(weightLabel);
              }
          }
      }
      
+     // Select source and destination for pathfinding visualization
+     int sourceVertex = 0;  // Talley Student Union
+     int destVertex = 17;   // Hunt Library
+     
+     // Create instances of algorithms
+     Dijkstra dijkstra;
+     AStar astarEuclidean([](int current, int goal, const Graph& g) {
+         return Heuristics::euclidean(current, goal, g);
+     });
+     AStar astarInadmissible([](int current, int goal, const Graph& g) {
+         return Heuristics::inadmissible(current, goal, g);
+     });
+     
+     // Find paths
+     std::vector<int> dijkstraPath = dijkstra.findPath(graph, sourceVertex, destVertex);
+     std::vector<int> astarPath = astarEuclidean.findPath(graph, sourceVertex, destVertex);
+     std::vector<int> inadmissiblePath = astarInadmissible.findPath(graph, sourceVertex, destVertex);
+     
+     // Output performance for this path
+     std::cout << "\nPath from " << locationNames[sourceVertex] << " to " << locationNames[destVertex] << ":" << std::endl;
+     std::cout << "Dijkstra: Nodes explored = " << dijkstra.getNodesExplored() 
+               << ", Cost = " << dijkstra.getPathCost() << std::endl;
+     std::cout << "A* (Euclidean): Nodes explored = " << astarEuclidean.getNodesExplored() 
+               << ", Cost = " << astarEuclidean.getPathCost() << std::endl;
+     std::cout << "A* (Inadmissible): Nodes explored = " << astarInadmissible.getNodesExplored()
+               << ", Cost = " << astarInadmissible.getPathCost() << std::endl;
+     
+     // Create visualization for paths
+     sf::VertexArray dijkstraLine(sf::LinesStrip, dijkstraPath.size());
+     for (size_t i = 0; i < dijkstraPath.size(); i++) {
+         dijkstraLine[i].position = graph.getVertexPosition(dijkstraPath[i]);
+         dijkstraLine[i].color = sf::Color::Red;
+     }
+     
+     sf::VertexArray astarLine(sf::LinesStrip, astarPath.size());
+     for (size_t i = 0; i < astarPath.size(); i++) {
+         astarLine[i].position = graph.getVertexPosition(astarPath[i]);
+         astarLine[i].color = sf::Color::Green;
+     }
+     
+     sf::VertexArray inadmissibleLine(sf::LinesStrip, inadmissiblePath.size());
+     for (size_t i = 0; i < inadmissiblePath.size(); i++) {
+         inadmissibleLine[i].position = graph.getVertexPosition(inadmissiblePath[i]);
+         inadmissibleLine[i].color = sf::Color::Blue;
+     }
+     
+     // Highlight source and destination
+     sf::CircleShape sourceMarker(12);
+     sourceMarker.setPosition(graph.getVertexPosition(sourceVertex) - sf::Vector2f(12, 12));
+     sourceMarker.setFillColor(sf::Color::Transparent);
+     sourceMarker.setOutlineColor(sf::Color::Yellow);
+     sourceMarker.setOutlineThickness(3);
+     
+     sf::CircleShape destMarker(12);
+     destMarker.setPosition(graph.getVertexPosition(destVertex) - sf::Vector2f(12, 12));
+     destMarker.setFillColor(sf::Color::Transparent);
+     destMarker.setOutlineColor(sf::Color::Magenta);
+     destMarker.setOutlineThickness(3);
+
      // Main rendering loop
      while (window.isOpen()) {
          sf::Event event;
          while (window.pollEvent(event)) {
              if (event.type == sf::Event::Closed) {
                  window.close();
+             } else if (event.type == sf::Event::KeyPressed) {
+                 if (event.key.code == sf::Keyboard::Escape) {
+                     window.close();
+                 }
              }
          }
          
@@ -255,15 +477,26 @@
              window.draw(edge);
          }
          
+         // Draw path lines
+         window.draw(dijkstraLine);
+         window.draw(astarLine);
+         window.draw(inadmissibleLine);
+         
          // Draw vertices
          for (const auto& vertex : vertices) {
              window.draw(vertex);
          }
          
-         // Draw labels
-         for (const auto& label : labels) {
-             window.draw(label);
-         }
+         // Draw source and destination markers
+         window.draw(sourceMarker);
+         window.draw(destMarker);
+
+         // Draw labels (just the node labels)
+        if (fontLoaded) {
+            for (const auto& label : labels) {
+                window.draw(label);
+            }
+        }
          
          window.display();
      }
@@ -275,41 +508,46 @@
   */
  std::vector<std::string> createLocationNames() {
      return {
-         "Talley Student Union",       // 0
-         "D.H. Hill Library",          // 1
+         "Talley Student \nUnion",       // 0
+         "D.H. Hill \nLibrary",          // 1
          "SAS Hall",                   // 2
          "Cox Hall",                   // 3
-         "Engineering Building I",     // 4
-         "Engineering Building II",    // 5
-         "Engineering Building III",   // 6
+         "Engineering \nBuilding I",     // 4
+         "Engineering \nBuilding II",    // 5
+         "Engineering \nBuilding III",   // 6
          "Daniels Hall",               // 7
-         "Riddick Hall",               // 8
-         "Mann Hall",                  // 9
+         "Riddick \nHall",               // 8
+         "Mann \nHall",                  // 9
          "Broughton Hall",             // 10
          "Burlington Labs",            // 11
          "Textiles Complex",           // 12
-         "Centennial Campus Center",   // 13
-         "Reynolds Coliseum",          // 14
+         "Centennial \nCampus Center",   // 13
+         "Reynolds \nColiseum",          // 14
          "Carmichael Gym",             // 15
-         "Talley Student Center",      // 16
+         "Talley \nStudent Center",      // 16
          "Hunt Library",               // 17
          "Bell Tower",                 // 18
-         "Court of Carolinas"          // 19
+         "Court of \nCarolinas"          // 19
      };
  }
  
  /**
   * @brief Main function for testing the campus graph.
-  * @return 0 on success.
   */
  int main() {
      // Create the graph
+     std::cout << "Creating campus graph..." << std::endl;
      Graph campusGraph = createCampusGraph();
      
      // Create location names
      std::vector<std::string> locationNames = createLocationNames();
      
+     // Run algorithm comparison tests
+     std::cout << "Running pathfinding tests..." << std::endl;
+     testPathfinding(campusGraph, locationNames);
+     
      // Visualize the graph
+     std::cout << "Visualizing campus graph..." << std::endl;
      visualizeCampusGraph(campusGraph, locationNames);
      
      return 0;
