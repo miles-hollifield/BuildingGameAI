@@ -6,12 +6,17 @@
  * Date: 3/20/2025
  */
 
- #include "headers/Graph.h"
+ #include "../headers/Graph.h"
+ #include "../headers/Dijkstra.h"
+ #include "../headers/AStar.h"
+ #include "../headers/Heuristics.h"
  #include <random>
  #include <chrono>
  #include <iostream>
  #include <unordered_set>
  #include <string>
+ #include <iomanip>
+ #include <vector>
  #include <cmath>
  
  /**
@@ -49,13 +54,13 @@
      int totalEdges = numVertices * avgEdgesPerVertex;
      int edgesAdded = 0;
      
-     std::cout << "Generating " << totalEdges << " edges for " << numVertices << " vertices..." << std::endl;
+     std::cout << "\nGenerating " << totalEdges << " edges for " << numVertices << " vertices..." << std::endl;
      
      // Using sets to avoid duplicate edges
      std::vector<std::unordered_set<int>> adjacency(numVertices);
      
      // Progress tracking
-     int progressStep = totalEdges / 20; // Update progress every 5%
+     int progressStep = totalEdges / 10; // Update progress every 10%
      int nextProgressUpdate = progressStep;
      
      while (edgesAdded < totalEdges) {
@@ -90,9 +95,8 @@
   * @brief Run performance tests on graph algorithms.
   * @param graph The graph to test.
   * @param numTrials Number of trials to run.
-  * @param isLargeGraph Whether this is the large graph (affects visualization).
   */
- void runPerformanceTests(Graph& graph, int numTrials, bool isLargeGraph) {
+ void runPerformanceTests(Graph& graph, int numTrials) {
      // Create algorithms
      Dijkstra dijkstra;
      
@@ -120,13 +124,19 @@
          double avgMaxFringe = 0.0;
          double avgPathCost = 0.0;
          double avgPathLength = 0.0;
+         double minTime = std::numeric_limits<double>::max();
+         double maxTime = 0.0;
          int successCount = 0;
+         int optimalCount = 0;
      };
      
      AlgoStats dijkstraStats, astarEuclideanStats, astarManhattanStats, astarInadmissibleStats;
      
      // Run trials
-     std::cout << "Running " << numTrials << " pathfinding trials..." << std::endl;
+     std::cout << "=====================================================" << std::endl;
+     std::cout << "PATHFINDING TEST RESULTS - LARGE RANDOM GRAPH" << std::endl;
+     std::cout << "=====================================================" << std::endl;
+     std::cout << "\nRunning " << numTrials << " pathfinding trials..." << std::endl;
      
      for (int trial = 0; trial < numTrials; trial++) {
          // Select random start and goal vertices
@@ -139,8 +149,9 @@
              continue;
          }
          
-         std::cout << "Trial " << (trial + 1) << ": Finding path from vertex " 
+         std::cout << "\nTrial " << (trial + 1) << ": Finding path from vertex " 
                    << start << " to " << goal << std::endl;
+         std::cout << "-----------------------------------------------------" << std::endl;
          
          // Test Dijkstra
          auto dijkstraStart = std::chrono::high_resolution_clock::now();
@@ -148,6 +159,8 @@
          auto dijkstraEnd = std::chrono::high_resolution_clock::now();
          std::chrono::duration<double, std::milli> dijkstraTime = dijkstraEnd - dijkstraStart;
          
+         // Record Dijkstra results
+         std::cout << "Dijkstra:" << std::endl;
          if (!dijkstraPath.empty()) {
              dijkstraStats.successCount++;
              dijkstraStats.avgTime += dijkstraTime.count();
@@ -155,6 +168,17 @@
              dijkstraStats.avgMaxFringe += dijkstra.getMaxFringeSize();
              dijkstraStats.avgPathCost += dijkstra.getPathCost();
              dijkstraStats.avgPathLength += dijkstraPath.size();
+             dijkstraStats.minTime = std::min(dijkstraStats.minTime, dijkstraTime.count());
+             dijkstraStats.maxTime = std::max(dijkstraStats.maxTime, dijkstraTime.count());
+             dijkstraStats.optimalCount++; // Dijkstra's paths are always optimal
+             
+             std::cout << "  Path found! Length: " << dijkstraPath.size() 
+                       << ", Cost: " << dijkstra.getPathCost() << std::endl;
+             std::cout << "  Nodes explored: " << dijkstra.getNodesExplored() 
+                       << ", Max fringe: " << dijkstra.getMaxFringeSize() << std::endl;
+             std::cout << "  Execution time: " << dijkstraTime.count() << " ms" << std::endl;
+         } else {
+             std::cout << "  No path found!" << std::endl;
          }
          
          // Test A* with Euclidean heuristic
@@ -164,6 +188,8 @@
          std::chrono::duration<double, std::milli> astarEuclideanTime = 
              astarEuclideanEnd - astarEuclideanStart;
          
+         // Record A* Euclidean results
+         std::cout << "A* (Euclidean):" << std::endl;
          if (!astarEuclideanPath.empty()) {
              astarEuclideanStats.successCount++;
              astarEuclideanStats.avgTime += astarEuclideanTime.count();
@@ -171,6 +197,31 @@
              astarEuclideanStats.avgMaxFringe += astarEuclidean.getMaxFringeSize();
              astarEuclideanStats.avgPathCost += astarEuclidean.getPathCost();
              astarEuclideanStats.avgPathLength += astarEuclideanPath.size();
+             astarEuclideanStats.minTime = std::min(astarEuclideanStats.minTime, astarEuclideanTime.count());
+             astarEuclideanStats.maxTime = std::max(astarEuclideanStats.maxTime, astarEuclideanTime.count());
+             
+             // Check if path is optimal (same cost as Dijkstra)
+             if (!dijkstraPath.empty() && 
+                 std::fabs(astarEuclidean.getPathCost() - dijkstra.getPathCost()) < 0.001f) {
+                 astarEuclideanStats.optimalCount++;
+             }
+             
+             std::cout << "  Path found! Length: " << astarEuclideanPath.size() 
+                       << ", Cost: " << astarEuclidean.getPathCost() << std::endl;
+             std::cout << "  Nodes explored: " << astarEuclidean.getNodesExplored() 
+                       << ", Max fringe: " << astarEuclidean.getMaxFringeSize() << std::endl;
+             std::cout << "  Execution time: " << astarEuclideanTime.count() << " ms" << std::endl;
+             
+             // Compare to Dijkstra
+             if (!dijkstraPath.empty()) {
+                 double nodesExploredRatio = (double)astarEuclidean.getNodesExplored() / dijkstra.getNodesExplored() * 100.0;
+                 std::cout << "  Explored " << std::fixed << std::setprecision(2) << nodesExploredRatio 
+                           << "% of the nodes that Dijkstra explored" << std::endl;
+                 std::cout << "  Path is " << (std::fabs(astarEuclidean.getPathCost() - dijkstra.getPathCost()) < 0.001f ? 
+                                            "optimal" : "NOT optimal") << std::endl;
+             }
+         } else {
+             std::cout << "  No path found!" << std::endl;
          }
          
          // Test A* with Manhattan heuristic
@@ -180,6 +231,8 @@
          std::chrono::duration<double, std::milli> astarManhattanTime = 
              astarManhattanEnd - astarManhattanStart;
          
+         // Record A* Manhattan results
+         std::cout << "A* (Manhattan):" << std::endl;
          if (!astarManhattanPath.empty()) {
              astarManhattanStats.successCount++;
              astarManhattanStats.avgTime += astarManhattanTime.count();
@@ -187,6 +240,31 @@
              astarManhattanStats.avgMaxFringe += astarManhattan.getMaxFringeSize();
              astarManhattanStats.avgPathCost += astarManhattan.getPathCost();
              astarManhattanStats.avgPathLength += astarManhattanPath.size();
+             astarManhattanStats.minTime = std::min(astarManhattanStats.minTime, astarManhattanTime.count());
+             astarManhattanStats.maxTime = std::max(astarManhattanStats.maxTime, astarManhattanTime.count());
+             
+             // Check if path is optimal (same cost as Dijkstra)
+             if (!dijkstraPath.empty() && 
+                 std::fabs(astarManhattan.getPathCost() - dijkstra.getPathCost()) < 0.001f) {
+                 astarManhattanStats.optimalCount++;
+             }
+             
+             std::cout << "  Path found! Length: " << astarManhattanPath.size() 
+                       << ", Cost: " << astarManhattan.getPathCost() << std::endl;
+             std::cout << "  Nodes explored: " << astarManhattan.getNodesExplored() 
+                       << ", Max fringe: " << astarManhattan.getMaxFringeSize() << std::endl;
+             std::cout << "  Execution time: " << astarManhattanTime.count() << " ms" << std::endl;
+             
+             // Compare to Dijkstra
+             if (!dijkstraPath.empty()) {
+                 double nodesExploredRatio = (double)astarManhattan.getNodesExplored() / dijkstra.getNodesExplored() * 100.0;
+                 std::cout << "  Explored " << std::fixed << std::setprecision(2) << nodesExploredRatio 
+                           << "% of the nodes that Dijkstra explored" << std::endl;
+                 std::cout << "  Path is " << (std::fabs(astarManhattan.getPathCost() - dijkstra.getPathCost()) < 0.001f ? 
+                                            "optimal" : "NOT optimal") << std::endl;
+             }
+         } else {
+             std::cout << "  No path found!" << std::endl;
          }
          
          // Test A* with Inadmissible heuristic
@@ -196,6 +274,8 @@
          std::chrono::duration<double, std::milli> astarInadmissibleTime = 
              astarInadmissibleEnd - astarInadmissibleStart;
          
+         // Record A* Inadmissible results
+         std::cout << "A* (Inadmissible):" << std::endl;
          if (!astarInadmissiblePath.empty()) {
              astarInadmissibleStats.successCount++;
              astarInadmissibleStats.avgTime += astarInadmissibleTime.count();
@@ -203,17 +283,32 @@
              astarInadmissibleStats.avgMaxFringe += astarInadmissible.getMaxFringeSize();
              astarInadmissibleStats.avgPathCost += astarInadmissible.getPathCost();
              astarInadmissibleStats.avgPathLength += astarInadmissiblePath.size();
+             astarInadmissibleStats.minTime = std::min(astarInadmissibleStats.minTime, astarInadmissibleTime.count());
+             astarInadmissibleStats.maxTime = std::max(astarInadmissibleStats.maxTime, astarInadmissibleTime.count());
+             
+             // Check if path is optimal (same cost as Dijkstra)
+             if (!dijkstraPath.empty() && 
+                 std::fabs(astarInadmissible.getPathCost() - dijkstra.getPathCost()) < 0.001f) {
+                 astarInadmissibleStats.optimalCount++;
+             }
+             
+             std::cout << "  Path found! Length: " << astarInadmissiblePath.size() 
+                       << ", Cost: " << astarInadmissible.getPathCost() << std::endl;
+             std::cout << "  Nodes explored: " << astarInadmissible.getNodesExplored() 
+                       << ", Max fringe: " << astarInadmissible.getMaxFringeSize() << std::endl;
+             std::cout << "  Execution time: " << astarInadmissibleTime.count() << " ms" << std::endl;
+             
+             // Compare to Dijkstra
+             if (!dijkstraPath.empty()) {
+                 double nodesExploredRatio = (double)astarInadmissible.getNodesExplored() / dijkstra.getNodesExplored() * 100.0;
+                 std::cout << "  Explored " << std::fixed << std::setprecision(2) << nodesExploredRatio 
+                           << "% of the nodes that Dijkstra explored" << std::endl;
+                 std::cout << "  Path is " << (std::fabs(astarInadmissible.getPathCost() - dijkstra.getPathCost()) < 0.001f ? 
+                                            "optimal" : "NOT optimal") << std::endl;
+             }
+         } else {
+             std::cout << "  No path found!" << std::endl;
          }
-         
-         // Print results for this trial
-         std::cout << "  Dijkstra: " << dijkstraTime.count() << "ms, " 
-                  << dijkstra.getNodesExplored() << " nodes explored" << std::endl;
-         std::cout << "  A* (Euclidean): " << astarEuclideanTime.count() << "ms, " 
-                  << astarEuclidean.getNodesExplored() << " nodes explored" << std::endl;
-         std::cout << "  A* (Manhattan): " << astarManhattanTime.count() << "ms, " 
-                  << astarManhattan.getNodesExplored() << " nodes explored" << std::endl;
-         std::cout << "  A* (Inadmissible): " << astarInadmissibleTime.count() << "ms, " 
-                  << astarInadmissible.getNodesExplored() << " nodes explored" << std::endl;
      }
      
      // Calculate averages
@@ -250,53 +345,110 @@
      }
      
      // Print overall results
-     std::cout << "\nOverall Results (" << numTrials << " trials):" << std::endl;
-     std::cout << "------------------------------------------------------" << std::endl;
-     std::cout << "Algorithm | Success | Time (ms) | Nodes | Fringe | Cost | Length" << std::endl;
-     std::cout << "------------------------------------------------------" << std::endl;
+     std::cout << "\n=====================================================" << std::endl;
+     std::cout << "SUMMARY RESULTS (" << numTrials << " trials)" << std::endl;
+     std::cout << "=====================================================" << std::endl;
      
-     printf("Dijkstra  | %7d | %9.2f | %5.0f | %6.0f | %4.1f | %6.1f\n", 
-            dijkstraStats.successCount, dijkstraStats.avgTime, 
-            dijkstraStats.avgNodesExplored, dijkstraStats.avgMaxFringe,
-            dijkstraStats.avgPathCost, dijkstraStats.avgPathLength);
+     // Success rate
+     std::cout << "Success Rate:" << std::endl;
+     std::cout << "  Dijkstra: " << dijkstraStats.successCount << "/" << numTrials 
+               << " (" << (100.0 * dijkstraStats.successCount / numTrials) << "%)" << std::endl;
+     std::cout << "  A* (Euclidean): " << astarEuclideanStats.successCount << "/" << numTrials 
+               << " (" << (100.0 * astarEuclideanStats.successCount / numTrials) << "%)" << std::endl;
+     std::cout << "  A* (Manhattan): " << astarManhattanStats.successCount << "/" << numTrials 
+               << " (" << (100.0 * astarManhattanStats.successCount / numTrials) << "%)" << std::endl;
+     std::cout << "  A* (Inadmissible): " << astarInadmissibleStats.successCount << "/" << numTrials 
+               << " (" << (100.0 * astarInadmissibleStats.successCount / numTrials) << "%)" << std::endl;
      
-     printf("A*(Euclid)| %7d | %9.2f | %5.0f | %6.0f | %4.1f | %6.1f\n", 
-            astarEuclideanStats.successCount, astarEuclideanStats.avgTime, 
-            astarEuclideanStats.avgNodesExplored, astarEuclideanStats.avgMaxFringe,
-            astarEuclideanStats.avgPathCost, astarEuclideanStats.avgPathLength);
+     // Optimality
+     std::cout << "\nPath Optimality (when a path was found):" << std::endl;
+     std::cout << "  Dijkstra: " << dijkstraStats.optimalCount << "/" << dijkstraStats.successCount 
+               << " (" << (100.0 * dijkstraStats.optimalCount / dijkstraStats.successCount) << "%)" << std::endl;
+     std::cout << "  A* (Euclidean): " << astarEuclideanStats.optimalCount << "/" << astarEuclideanStats.successCount 
+               << " (" << (100.0 * astarEuclideanStats.optimalCount / astarEuclideanStats.successCount) << "%)" << std::endl;
+     std::cout << "  A* (Manhattan): " << astarManhattanStats.optimalCount << "/" << astarManhattanStats.successCount 
+               << " (" << (100.0 * astarManhattanStats.optimalCount / astarManhattanStats.successCount) << "%)" << std::endl;
+     std::cout << "  A* (Inadmissible): " << astarInadmissibleStats.optimalCount << "/" << astarInadmissibleStats.successCount 
+               << " (" << (100.0 * astarInadmissibleStats.optimalCount / astarInadmissibleStats.successCount) << "%)" << std::endl;
      
-     printf("A*(Manhat)| %7d | %9.2f | %5.0f | %6.0f | %4.1f | %6.1f\n", 
-            astarManhattanStats.successCount, astarManhattanStats.avgTime, 
-            astarManhattanStats.avgNodesExplored, astarManhattanStats.avgMaxFringe,
-            astarManhattanStats.avgPathCost, astarManhattanStats.avgPathLength);
+     // Performance metrics
+     std::cout << "\nAverage Nodes Explored:" << std::endl;
+     std::cout << "  Dijkstra: " << std::fixed << std::setprecision(1) << dijkstraStats.avgNodesExplored << std::endl;
+     std::cout << "  A* (Euclidean): " << std::fixed << std::setprecision(1) << astarEuclideanStats.avgNodesExplored 
+               << " (" << (100.0 * astarEuclideanStats.avgNodesExplored / dijkstraStats.avgNodesExplored) << "% of Dijkstra)" << std::endl;
+     std::cout << "  A* (Manhattan): " << std::fixed << std::setprecision(1) << astarManhattanStats.avgNodesExplored 
+               << " (" << (100.0 * astarManhattanStats.avgNodesExplored / dijkstraStats.avgNodesExplored) << "% of Dijkstra)" << std::endl;
+     std::cout << "  A* (Inadmissible): " << std::fixed << std::setprecision(1) << astarInadmissibleStats.avgNodesExplored 
+               << " (" << (100.0 * astarInadmissibleStats.avgNodesExplored / dijkstraStats.avgNodesExplored) << "% of Dijkstra)" << std::endl;
      
-     printf("A*(Inadm) | %7d | %9.2f | %5.0f | %6.0f | %4.1f | %6.1f\n", 
-            astarInadmissibleStats.successCount, astarInadmissibleStats.avgTime, 
-            astarInadmissibleStats.avgNodesExplored, astarInadmissibleStats.avgMaxFringe,
-            astarInadmissibleStats.avgPathCost, astarInadmissibleStats.avgPathLength);
+     std::cout << "\nAverage Max Fringe Size:" << std::endl;
+     std::cout << "  Dijkstra: " << std::fixed << std::setprecision(1) << dijkstraStats.avgMaxFringe << std::endl;
+     std::cout << "  A* (Euclidean): " << std::fixed << std::setprecision(1) << astarEuclideanStats.avgMaxFringe << std::endl;
+     std::cout << "  A* (Manhattan): " << std::fixed << std::setprecision(1) << astarManhattanStats.avgMaxFringe << std::endl;
+     std::cout << "  A* (Inadmissible): " << std::fixed << std::setprecision(1) << astarInadmissibleStats.avgMaxFringe << std::endl;
      
-     std::cout << "------------------------------------------------------" << std::endl;
+     std::cout << "\nExecution Time (milliseconds):" << std::endl;
+     std::cout << "  Dijkstra: avg=" << std::fixed << std::setprecision(3) << dijkstraStats.avgTime 
+               << ", min=" << dijkstraStats.minTime << ", max=" << dijkstraStats.maxTime << std::endl;
+     std::cout << "  A* (Euclidean): avg=" << std::fixed << std::setprecision(3) << astarEuclideanStats.avgTime 
+               << ", min=" << astarEuclideanStats.minTime << ", max=" << astarEuclideanStats.maxTime 
+               << " (" << (100.0 * astarEuclideanStats.avgTime / dijkstraStats.avgTime) << "% of Dijkstra)" << std::endl;
+     std::cout << "  A* (Manhattan): avg=" << std::fixed << std::setprecision(3) << astarManhattanStats.avgTime 
+               << ", min=" << astarManhattanStats.minTime << ", max=" << astarManhattanStats.maxTime 
+               << " (" << (100.0 * astarManhattanStats.avgTime / dijkstraStats.avgTime) << "% of Dijkstra)" << std::endl;
+     std::cout << "  A* (Inadmissible): avg=" << std::fixed << std::setprecision(3) << astarInadmissibleStats.avgTime 
+               << ", min=" << astarInadmissibleStats.minTime << ", max=" << astarInadmissibleStats.maxTime 
+               << " (" << (100.0 * astarInadmissibleStats.avgTime / dijkstraStats.avgTime) << "% of Dijkstra)" << std::endl;
+     
+     std::cout << "\nAverage Path Length (vertices):" << std::endl;
+     std::cout << "  Dijkstra: " << std::fixed << std::setprecision(1) << dijkstraStats.avgPathLength << std::endl;
+     std::cout << "  A* (Euclidean): " << std::fixed << std::setprecision(1) << astarEuclideanStats.avgPathLength << std::endl;
+     std::cout << "  A* (Manhattan): " << std::fixed << std::setprecision(1) << astarManhattanStats.avgPathLength << std::endl;
+     std::cout << "  A* (Inadmissible): " << std::fixed << std::setprecision(1) << astarInadmissibleStats.avgPathLength << std::endl;
+     
+     std::cout << "\nAverage Path Cost:" << std::endl;
+     std::cout << "  Dijkstra: " << std::fixed << std::setprecision(2) << dijkstraStats.avgPathCost << std::endl;
+     std::cout << "  A* (Euclidean): " << std::fixed << std::setprecision(2) << astarEuclideanStats.avgPathCost 
+               << " (+" << (astarEuclideanStats.avgPathCost - dijkstraStats.avgPathCost) << " vs Dijkstra)" << std::endl;
+     std::cout << "  A* (Manhattan): " << std::fixed << std::setprecision(2) << astarManhattanStats.avgPathCost 
+               << " (+" << (astarManhattanStats.avgPathCost - dijkstraStats.avgPathCost) << " vs Dijkstra)" << std::endl;
+     std::cout << "  A* (Inadmissible): " << std::fixed << std::setprecision(2) << astarInadmissibleStats.avgPathCost 
+               << " (+" << (astarInadmissibleStats.avgPathCost - dijkstraStats.avgPathCost) << " vs Dijkstra)" << std::endl;
  }
  
  /**
   * @brief Main function to create and test large graph.
-  * @return 0 on success.
   */
  int main() {
      // Parameters for large graph
      int numVertices = 20000;  // 20,000 vertices
-     int avgEdgesPerVertex = 5; // 5 edges per vertex
+     int avgEdgesPerVertex = 5; // 5 edges per vertex (100,000 total edges)
      float minWeight = 1.0f;    // Minimum edge weight
      float maxWeight = 10.0f;   // Maximum edge weight
      
-     // Create the large graph
-     std::cout << "Creating large graph with " << numVertices << " vertices..." << std::endl;
-     Graph largeGraph = createLargeGraph(numVertices, avgEdgesPerVertex, minWeight, maxWeight);
+     // Check if we should load from file instead of creating new graph
+     bool createNew = true;
+     Graph largeGraph(0);
+     
+     if (createNew) {
+         // Create the large graph
+         std::cout << "Creating large graph with " << numVertices << " vertices..." << std::endl;
+         largeGraph = createLargeGraph(numVertices, avgEdgesPerVertex, minWeight, maxWeight);
+     } else {
+         // Try to load from file
+         std::cout << "Loading large graph from file..." << std::endl;
+         if (!largeGraph.loadFromFile("large_graph.dat")) {
+             std::cout << "Failed to load graph from file. Creating new graph..." << std::endl;
+             largeGraph = createLargeGraph(numVertices, avgEdgesPerVertex, minWeight, maxWeight);
+         } else {
+             std::cout << "Graph loaded successfully with " << largeGraph.size() << " vertices." << std::endl;
+         }
+     }
      
      // Run performance tests
-     int numTrials = 20; // Number of pathfinding trials
+     int numTrials = 10; // Number of pathfinding trials
      std::cout << "\nRunning performance tests on large graph..." << std::endl;
-     runPerformanceTests(largeGraph, numTrials, true);
+     runPerformanceTests(largeGraph, numTrials);
      
      return 0;
  }
