@@ -76,7 +76,7 @@
          
          // Initialize sprite
          sprite.setTexture(texture);
-         sprite.setScale(0.1f, 0.1f);
+         sprite.setScale(0.05f, 0.05f);
          sprite.setOrigin(texture.getSize().x / 2, texture.getSize().y / 2);
          sprite.setPosition(startPosition);
      }
@@ -101,6 +101,24 @@
          // Clear breadcrumbs
          breadcrumbs.clear();
      }
+
+     /**
+     * @brief Set position of the agent directly.
+     * @param position New position for the agent.
+     */
+    void setPosition(sf::Vector2f position) {
+        character.position = position;
+        character.velocity = {0, 0};
+        sprite.setPosition(position);
+        
+        // Reset target and path
+        target.position = position;
+        path.clear();
+        currentWaypoint = 0;
+        
+        // Clear breadcrumbs
+        breadcrumbs.clear();
+    }
      
      /**
       * @brief Update the agent's position to follow the path.
