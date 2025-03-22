@@ -125,50 +125,74 @@
       * @param deltaTime Time since last update.
       */
      void update(float deltaTime) {
-         // If no path or at the end of the path, don't move
-         if (path.empty() || currentWaypoint >= path.size()) {
-             return;
-         }
-         
-         // Calculate desired orientation based on current velocity
-         if (character.velocity.x != 0 || character.velocity.y != 0) {
-             float angle = std::atan2(character.velocity.y, character.velocity.x);
-             target.orientation = angle * (180.0f / 3.14159265f);
-         }
-         
-         // Apply Arrive behavior to navigate to current waypoint
-         SteeringData arriveAcceleration = arriveBehavior.calculateAcceleration(character, target);
-         character.velocity += arriveAcceleration.linear * deltaTime;
-         
-         // Apply Align behavior to match orientation
-         SteeringData alignAcceleration = alignBehavior.calculateAcceleration(character, target);
-         character.rotation += alignAcceleration.angular * deltaTime;
-         
-         // Update character position and orientation
-         character.update(deltaTime);
-         
-         // Check if we've reached the current waypoint
-         float distToWaypoint = std::sqrt(
-             (target.position.x - character.position.x) * (target.position.x - character.position.x) +
-             (target.position.y - character.position.y) * (target.position.y - character.position.y)
-         );
-         
-         if (distToWaypoint < 15.0f) {  // Threshold for reaching a waypoint
-             currentWaypoint++;
-             
-             // If there are more waypoints, set the next one as target
-             if (currentWaypoint < path.size()) {
-                 target.position = path[currentWaypoint];
-             }
-         }
-         
-         // Update sprite position and rotation
-         sprite.setPosition(character.position);
-         sprite.setRotation(character.orientation);
-         
-         // Handle breadcrumbs
-         dropBreadcrumbs();
-     }
+        // If no path or at the end of the path, don't move
+        if (path.empty() || currentWaypoint >= path.size()) {
+            // Stop moving when we've reached the final waypoint
+            character.velocity = {0, 0};
+            character.rotation = 0;
+            return;
+        }
+        
+        // Target is the current waypoint we're moving toward
+        target.position = path[currentWaypoint];
+        
+        // Calculate desired orientation based on direction to target
+        sf::Vector2f dirToTarget = target.position - character.position;
+        float distToTarget = std::sqrt(dirToTarget.x * dirToTarget.x + dirToTarget.y * dirToTarget.y);
+        
+        if (distToTarget > 0.1f) {
+            // Normalize direction vector
+            dirToTarget /= distToTarget;
+            float desiredOrientation = std::atan2(dirToTarget.y, dirToTarget.x) * (180.0f / 3.14159265f);
+            target.orientation = desiredOrientation;
+        }
+        
+        // Apply Arrive behavior to navigate to current waypoint
+        SteeringData arriveAcceleration = arriveBehavior.calculateAcceleration(character, target);
+        character.velocity += arriveAcceleration.linear * deltaTime;
+        
+        // Limit velocity to max speed if needed
+        float currentSpeed = std::sqrt(character.velocity.x * character.velocity.x + 
+                                      character.velocity.y * character.velocity.y);
+        const float MAX_SPEED = 175.0f;
+        if (currentSpeed > MAX_SPEED) {
+            character.velocity *= (MAX_SPEED / currentSpeed);
+        }
+        
+        // Apply Align behavior to match orientation
+        SteeringData alignAcceleration = alignBehavior.calculateAcceleration(character, target);
+        character.rotation += alignAcceleration.angular * deltaTime;
+
+        if (character.velocity.x != 0 || character.velocity.y != 0) {
+            float angle = std::atan2(character.velocity.y, character.velocity.x) * (180.0f / 3.14159265f);
+            character.orientation = angle;
+            sprite.setRotation(angle);
+        }
+        
+        // Update character position and orientation
+        character.update(deltaTime);
+        
+        // Check if we've reached the current waypoint
+        distToTarget = std::sqrt(
+            (target.position.x - character.position.x) * (target.position.x - character.position.x) +
+            (target.position.y - character.position.y) * (target.position.y - character.position.y)
+        );
+        
+        // Waypoint reached threshold (reduced to ensure we get close enough)
+        const float WAYPOINT_THRESHOLD = 10.0f;
+        
+        if (distToTarget < WAYPOINT_THRESHOLD) {
+            std::cout << "Reached waypoint " << currentWaypoint << "/" << path.size() << std::endl;
+            currentWaypoint++;
+        }
+        
+        // Update sprite position and rotation
+        sprite.setPosition(character.position);
+        sprite.setRotation(character.orientation);
+        
+        // Handle breadcrumbs
+        dropBreadcrumbs();
+    }
      
      /**
       * @brief Check if the agent has reached the end of the path.

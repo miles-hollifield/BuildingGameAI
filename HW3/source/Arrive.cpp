@@ -27,7 +27,7 @@ SteeringData Arrive::calculateAcceleration(const Kinematic& character, const Kin
     if (distance > slowRadius) {
         targetSpeed = maxSpeed;  // Move at max speed
     } else {
-        targetSpeed = targetSpeed * (distance / slowRadius);  // Slow down proportionally
+        targetSpeed = maxSpeed * (distance / slowRadius);  // Slow down proportionally
     }
 
     // Normalize Direction & Apply Target Speed

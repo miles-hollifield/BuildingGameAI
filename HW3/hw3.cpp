@@ -32,61 +32,61 @@
     Environment env(width, height);
     
     // Create a large background room that encompasses the entire space
-    env.addRoom(sf::FloatRect(50, 50, 700, 500));
+    env.addRoom(sf::FloatRect(30, 30, 580, 420));
     
     // Add walls to define rooms with openings for doorways
     
     // Top horizontal divider with doorway gap
-    env.addObstacle(sf::FloatRect(50, 200, 300, 10));  // Left section
-    env.addObstacle(sf::FloatRect(400, 200, 350, 10)); // Right section
+    env.addObstacle(sf::FloatRect(30, 170, 250, 10));  // Left section
+    env.addObstacle(sf::FloatRect(330, 170, 280, 10)); // Right section
     
     // Vertical divider with two doorway gaps
-    env.addObstacle(sf::FloatRect(400, 50, 10, 100));  // Top section
-    env.addObstacle(sf::FloatRect(400, 250, 10, 150)); // Middle section
-    env.addObstacle(sf::FloatRect(400, 450, 10, 100)); // Bottom section
+    env.addObstacle(sf::FloatRect(330, 30, 10, 90));   // Top section
+    env.addObstacle(sf::FloatRect(330, 210, 10, 120)); // Middle section
+    env.addObstacle(sf::FloatRect(330, 370, 10, 80));  // Bottom section
     
     // Left vertical divider with doorway
-    env.addObstacle(sf::FloatRect(200, 200, 10, 150)); // Upper section
-    env.addObstacle(sf::FloatRect(200, 400, 10, 150)); // Lower section
+    env.addObstacle(sf::FloatRect(170, 170, 10, 120)); // Upper section
+    env.addObstacle(sf::FloatRect(170, 330, 10, 120)); // Lower section
     
     // Right vertical divider with doorway
-    env.addObstacle(sf::FloatRect(600, 200, 10, 150)); // Upper section
-    env.addObstacle(sf::FloatRect(600, 400, 10, 150)); // Lower section
+    env.addObstacle(sf::FloatRect(490, 170, 10, 120)); // Upper section
+    env.addObstacle(sf::FloatRect(490, 330, 10, 120)); // Lower section
     
-    // Bottom horizontal divider with doorway gap
-    env.addObstacle(sf::FloatRect(50, 400, 100, 10));  // Left section
-    env.addObstacle(sf::FloatRect(250, 400, 100, 10)); // Middle-left section
-    env.addObstacle(sf::FloatRect(450, 400, 100, 10)); // Middle-right section
-    env.addObstacle(sf::FloatRect(650, 400, 100, 10)); // Right section
+    // Bottom horizontal divider with doorway gaps
+    env.addObstacle(sf::FloatRect(30, 330, 90, 10));   // Left section
+    env.addObstacle(sf::FloatRect(210, 330, 80, 10));  // Middle-left section
+    env.addObstacle(sf::FloatRect(370, 330, 80, 10));  // Middle-right section
+    env.addObstacle(sf::FloatRect(530, 330, 80, 10));  // Right section
     
     // Add obstacles within rooms
     // Top-left room obstacles
-    env.addObstacle(sf::FloatRect(100, 100, 40, 40));
+    //env.addObstacle(sf::FloatRect(90, 80, 30, 30));
     
     // Top-right room obstacles
-    env.addObstacle(sf::FloatRect(500, 100, 30, 60));
+    env.addObstacle(sf::FloatRect(410, 80, 30, 40));
     
     // Middle-left room obstacles
-    env.addObstacle(sf::FloatRect(100, 300, 50, 30));
+    env.addObstacle(sf::FloatRect(80, 240, 40, 30));
     
     // Middle-center room obstacles
-    env.addObstacle(sf::FloatRect(300, 300, 30, 70));
+    env.addObstacle(sf::FloatRect(260, 240, 30, 50));
     
     // Middle-right room obstacles
-    env.addObstacle(sf::FloatRect(480, 300, 70, 50));
+    env.addObstacle(sf::FloatRect(400, 240, 50, 40));
     
     // Bottom row room obstacles
-    env.addObstacle(sf::FloatRect(150, 480, 40, 40));
-    env.addObstacle(sf::FloatRect(350, 480, 30, 40));
-    env.addObstacle(sf::FloatRect(650, 450, 50, 30));
+    env.addObstacle(sf::FloatRect(120, 380, 30, 30));
+    env.addObstacle(sf::FloatRect(270, 380, 25, 35));
+    env.addObstacle(sf::FloatRect(530, 380, 40, 25));
     
     return env;
 }
  
  int main() {
      // Create window
-     int windowWidth = 800;
-     int windowHeight = 600;
+     int windowWidth = 640;
+     int windowHeight = 480;
      sf::RenderWindow window(sf::VideoMode(windowWidth, windowHeight), 
                             "CSC 584/484 - Pathfinding and Path Following");
      
@@ -149,22 +149,20 @@
      // Text for instructions
      sf::Text instructionText;
      if (fontLoaded) {
-         instructionText.setFont(font);
-         instructionText.setString("Left-click: Find path with A*\n"
-                                  "Right-click: Find path with Dijkstra\n"
-                                  "R: Reset agent position");
-         instructionText.setCharacterSize(14);
-         instructionText.setFillColor(sf::Color::Black);
-         instructionText.setPosition(10, 10);
-     }
+        instructionText.setFont(font);
+        instructionText.setString("Left-click: A* | Right-click: Dijkstra | R: Reset agent");
+        instructionText.setCharacterSize(10);  // Smaller text to fit in one line
+        instructionText.setFillColor(sf::Color::Black);
+        instructionText.setPosition(5, 5);  // At the very top
+    }
      
      // Text for path statistics
      sf::Text statsText;
      if (fontLoaded) {
          statsText.setFont(font);
-         statsText.setCharacterSize(14);
+         statsText.setCharacterSize(12);
          statsText.setFillColor(sf::Color::Black);
-         statsText.setPosition(10, windowHeight - 80);
+         statsText.setPosition(5, windowHeight - 20);
          statsText.setString("Click somewhere to navigate");
      }
      
@@ -215,88 +213,99 @@
                      showGraph = !showGraph;
                  }
              } else if (event.type == sf::Event::MouseButtonPressed) {
-                 // Get mouse position
-                 sf::Vector2f mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window));
-                 
-                 // Skip if clicking in an obstacle
-                 if (environment.isObstacle(mousePos)) {
-                     if (fontLoaded) {
-                         statsText.setString("Cannot navigate to this location (obstacle)");
-                     }
-                     continue;
-                 }
-                 
-                 // Get current agent position
-                 sf::Vector2f agentPos = agent.getPosition();
-                 
-                 // Convert positions to graph vertices
-                 int startVertex = environment.pointToVertex(agentPos);
-                 int goalVertex = environment.pointToVertex(mousePos);
-                 
-                 // Skip if vertices are the same
-                 if (startVertex == goalVertex) {
-                     continue;
-                 }
-                 
-                 // Measure the time to compute the path
-                 auto startTime = std::chrono::high_resolution_clock::now();
-                 
-                 std::vector<int> path;
-                 
-                 // Choose algorithm based on mouse button
-                 if (event.mouseButton.button == sf::Mouse::Left) {
-                     // Use A* algorithm
-                     path = astar.findPath(environmentGraph, startVertex, goalVertex);
-                     nodesExplored = astar.getNodesExplored();
-                     maxFringe = astar.getMaxFringeSize();
-                     pathCost = astar.getPathCost();
-                     algorithmName = "A*";
-                 } else if (event.mouseButton.button == sf::Mouse::Right) {
-                     // Use Dijkstra's algorithm
-                     path = dijkstra.findPath(environmentGraph, startVertex, goalVertex);
-                     nodesExplored = dijkstra.getNodesExplored();
-                     maxFringe = dijkstra.getMaxFringeSize();
-                     pathCost = dijkstra.getPathCost();
-                     algorithmName = "Dijkstra";
-                 }
-                 
-                 auto endTime = std::chrono::high_resolution_clock::now();
-                 std::chrono::duration<double, std::milli> duration = endTime - startTime;
-                 computeTime = duration.count();
-                 
-                 // Check if a path was found
-                 if (path.empty()) {
-                     if (fontLoaded) {
-                         statsText.setString("No path found!");
-                     }
-                     continue;
-                 }
-                 
-                 // Convert path to waypoints
-                 std::vector<sf::Vector2f> waypoints;
-                 for (int vertex : path) {
-                     waypoints.push_back(environmentGraph.getVertexPosition(vertex));
-                 }
-                 
-                 // Set the path for the agent to follow
-                 agent.setPath(waypoints);
-                 
-                 // Update stats text
-                 if (fontLoaded) {
-                     std::stringstream ss;
-                     ss << "Algorithm: " << algorithmName << "\n"
-                        << "Nodes Explored: " << nodesExplored << "\n"
-                        << "Max Fringe Size: " << maxFringe << "\n"
-                        << "Path Cost: " << std::fixed << std::setprecision(2) << pathCost << "\n"
-                        << "Compute Time: " << std::fixed << std::setprecision(3) << computeTime << " ms";
-                     statsText.setString(ss.str());
-                 }
-                 
-                 std::cout << "Path found with " << algorithmName << ": " 
-                           << path.size() << " vertices, "
-                           << "cost = " << pathCost << ", "
-                           << "nodes explored = " << nodesExplored << std::endl;
-             }
+                // Get mouse position
+                sf::Vector2f mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window));
+                
+                // Skip if clicking in an obstacle
+                if (environment.isObstacle(mousePos)) {
+                    if (fontLoaded) {
+                        statsText.setString("Cannot navigate to this location (obstacle)");
+                    }
+                    std::cout << "Cannot navigate - clicked on obstacle" << std::endl;
+                    continue;
+                }
+                
+                // Get current agent position
+                sf::Vector2f agentPos = agent.getPosition();
+                
+                // Convert positions to graph vertices
+                int startVertex = environment.pointToVertex(agentPos);
+                int goalVertex = environment.pointToVertex(mousePos);
+                
+                std::cout << "Agent position: (" << agentPos.x << "," << agentPos.y << ") -> vertex " << startVertex << std::endl;
+                std::cout << "Goal position: (" << mousePos.x << "," << mousePos.y << ") -> vertex " << goalVertex << std::endl;
+                
+                // Skip if vertices are the same
+                if (startVertex == goalVertex) {
+                    std::cout << "Start and goal vertices are the same - skipping" << std::endl;
+                    continue;
+                }
+                
+                // Measure the time to compute the path
+                auto startTime = std::chrono::high_resolution_clock::now();
+                
+                std::vector<int> path;
+                
+                // Choose algorithm based on mouse button
+                if (event.mouseButton.button == sf::Mouse::Left) {
+                    // Use A* algorithm
+                    path = astar.findPath(environmentGraph, startVertex, goalVertex);
+                    nodesExplored = astar.getNodesExplored();
+                    maxFringe = astar.getMaxFringeSize();
+                    pathCost = astar.getPathCost();
+                    algorithmName = "A*";
+                } else if (event.mouseButton.button == sf::Mouse::Right) {
+                    // Use Dijkstra's algorithm
+                    path = dijkstra.findPath(environmentGraph, startVertex, goalVertex);
+                    nodesExplored = dijkstra.getNodesExplored();
+                    maxFringe = dijkstra.getMaxFringeSize();
+                    pathCost = dijkstra.getPathCost();
+                    algorithmName = "Dijkstra";
+                }
+                
+                auto endTime = std::chrono::high_resolution_clock::now();
+                std::chrono::duration<double, std::milli> duration = endTime - startTime;
+                computeTime = duration.count();
+                
+                // Check if a path was found
+                if (path.empty()) {
+                    std::cout << "No path found from vertex " << startVertex << " to " << goalVertex << std::endl;
+                    if (fontLoaded) {
+                        statsText.setString("No path found!");
+                    }
+                    continue;
+                }
+                
+                // Convert path to waypoints
+                std::vector<sf::Vector2f> waypoints;
+                for (int vertex : path) {
+                    waypoints.push_back(environmentGraph.getVertexPosition(vertex));
+                }
+                
+                std::cout << "Path found with " << waypoints.size() << " waypoints:" << std::endl;
+                for (size_t i = 0; i < waypoints.size(); i++) {
+                    std::cout << "  " << i << ": (" << waypoints[i].x << "," << waypoints[i].y << ")" << std::endl;
+                }
+                
+                // Set the path for the agent to follow
+                agent.setPath(waypoints);
+                
+                // Update stats text
+                if (fontLoaded) {
+                    std::stringstream ss;
+                    ss << "Algo: " << algorithmName 
+                       << " | Nodes: " << nodesExplored 
+                       << " | Fringe: " << maxFringe 
+                       << " | Cost: " << std::fixed << std::setprecision(1) << pathCost 
+                       << " | Time: " << std::fixed << std::setprecision(1) << computeTime << "ms";
+                    statsText.setString(ss.str());
+                }
+                
+                std::cout << "Path found with " << algorithmName << ": " 
+                          << path.size() << " vertices, "
+                          << "cost = " << pathCost << ", "
+                          << "nodes explored = " << nodesExplored << std::endl;
+            }
          }
          
          // Update
