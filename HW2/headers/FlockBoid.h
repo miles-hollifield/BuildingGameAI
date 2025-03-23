@@ -5,6 +5,7 @@
  * Resources Used:
  * - SFML Official Tutorials: https://www.sfml-dev.org/learn.php
  * - Book: "Artificial Intelligence for Games" by Ian Millington
+ * - AI Tools: OpenAI's ChatGPT
  *
  * Author: Miles Hollifield
  * Date: 2/23/2025
@@ -16,6 +17,12 @@
 #include <SFML/Graphics.hpp>
 #include <vector>
 #include <cmath>
+
+/** OpenAI's ChatGPT was used to suggest a template header file for FlockBoid's
+ * implementation. The following prompt was used: "Create a template header file 
+ * for a class that implements flocking behavior (separation, alignment, and cohesion) 
+ * for a boid in C++ using SFML."
+ */
 
 /**
  * @class FlockBoid
@@ -103,3 +110,5 @@ private:
 };
 
 #endif // FLOCKBOID_H
+
+/** End ChatGPT citation */

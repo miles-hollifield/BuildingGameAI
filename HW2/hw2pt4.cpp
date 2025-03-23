@@ -5,6 +5,7 @@
  * Resources Used:
  * - SFML Official Tutorials: https://www.sfml-dev.org/learn.php
  * - Book: "Artificial Intelligence for Games" by Ian Millington
+ * - AI Tools: OpenAI's ChatGPT
  *
  * Author: Miles Hollifield
  * Date: 2/23/2025
