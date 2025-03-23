@@ -3,6 +3,8 @@
 #
 # This Makefile builds executables for the pathfinding and path following assignment.
 #
+# Adapted from the sample Makefile provided by Dr. David L. Roberts.
+#
 # Author: Miles Hollifield
 # Date: 3/20/2025
 # -----------------------------------------------------------------------------
