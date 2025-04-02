@@ -1,27 +1,24 @@
 # -----------------------------------------------------------------------------
-# Makefile for Compiling and Building Homework 3
+# Makefile for Compiling and Building Homework 4
 #
-# This Makefile builds executables for the pathfinding and path following assignment.
-#
-# Adapted from the sample Makefile provided by Dr. David L. Roberts.
+# This Makefile builds executables for decision trees, behavior trees, and learning.
 #
 # Author: Miles Hollifield
-# Date: 3/20/2025
+# Date: 4/7/2025
 # -----------------------------------------------------------------------------
 
 # Source Files by Component
-MAIN_SRC = hw3.cpp
-SMALL_GRAPH_SRC = source/SmallGraph.cpp
-LARGE_GRAPH_SRC = source/LargeGraph.cpp
-
-# Source files for path following behaviors
+MAIN_SRC = hw4.cpp
 BEHAVIOR_SRC = source/Arrive.cpp source/Align.cpp
+DT_SRC = source/DecisionTree.cpp source/BehaviorTree.cpp source/Monster.cpp source/DTLearning.cpp
 
 # Object files
 MAIN_OBJ = $(MAIN_SRC:.cpp=.o)
-SMALL_GRAPH_OBJ = $(SMALL_GRAPH_SRC:.cpp=.o)
-LARGE_GRAPH_OBJ = $(LARGE_GRAPH_SRC:.cpp=.o)
 BEHAVIOR_OBJ = $(BEHAVIOR_SRC:.cpp=.o)
+DT_OBJ = $(DT_SRC:.cpp=.o)
+
+# All object files
+ALL_OBJ = $(MAIN_OBJ) $(BEHAVIOR_OBJ) $(DT_OBJ)
 
 # Flags and Libraries
 CXXFLAGS = -std=c++17 -I. -Iheaders
@@ -47,28 +44,12 @@ MACOS_COMPILER=/usr/bin/clang++
 UBUNTU_COMPILER=/usr/bin/g++
 
 # Targets
-all: hw3 small_graph large_graph
+all: hw4
 
 uname_s := $(shell uname -s)
 
 # Build main application
-hw3: $(MAIN_OBJ) $(BEHAVIOR_OBJ)
-ifeq ($(uname_s),Darwin)
-	$(MACOS_COMPILER) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) $(MACOS_LIB)
-else ifeq ($(uname_s),Linux)
-	$(UBUNTU_COMPILER) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) $(UBUNTU_LIB)
-endif
-
-# Build small graph test
-small_graph: $(SMALL_GRAPH_OBJ)
-ifeq ($(uname_s),Darwin)
-	$(MACOS_COMPILER) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) $(MACOS_LIB)
-else ifeq ($(uname_s),Linux)
-	$(UBUNTU_COMPILER) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) $(UBUNTU_LIB)
-endif
-
-# Build large graph test
-large_graph: $(LARGE_GRAPH_OBJ)
+hw4: $(ALL_OBJ)
 ifeq ($(uname_s),Darwin)
 	$(MACOS_COMPILER) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) $(MACOS_LIB)
 else ifeq ($(uname_s),Linux)
@@ -86,5 +67,5 @@ endif
 # Clean Build Files
 .PHONY: clean
 clean:
-	rm -f $(MAIN_OBJ) $(SMALL_GRAPH_OBJ) $(LARGE_GRAPH_OBJ) $(BEHAVIOR_OBJ) hw3 small_graph large_graph
+	rm -f $(ALL_OBJ) hw4
 	rm -f *.dat

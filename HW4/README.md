@@ -1,144 +1,91 @@
-# CSC 584/484 Spring 2025 - Homework 3: Pathfinding and Path Following
+# CSC 584/484 Homework 4: Decision Trees, Behavior Trees, and Learning
 
 ## Overview
-This project implements pathfinding algorithms (Dijkstra's Algorithm and A*) and integrates them with path following behaviors from Homework 2. The implementation includes:
-
-- Graph representation with weighted edges
-- Dijkstra's shortest path algorithm
-- A* algorithm with multiple heuristic functions
-- Indoor environment with rooms and obstacles
-- Click-to-navigate functionality using pathfinding
-- Path following using steering behaviors from HW2
-
-## Project Structure
-
-### Headers
-- **Steering Behaviors (from HW2)**
-  - `Kinematic.h` - Position, velocity, orientation, and rotation
-  - `SteeringData.h` - Linear and angular acceleration structures
-  - `SteeringBehavior.h` - Abstract base class for behaviors
-  - `Arrive.h` - Smooth arrival behavior
-  - `Align.h` - Orientation alignment behavior
-
-- **Pathfinding (new for HW3)**
-  - `Graph.h` - Weighted directed graph representation
-  - `Pathfinder.h` - Abstract base class for pathfinding
-  - `Dijkstra.h` - Dijkstra's algorithm implementation
-  - `AStar.h` - A* algorithm implementation
-  - `Heuristics.h` - Various heuristic functions for A*
-  - `Environment.h` - Indoor environment representation
-  - `PathFollower.h` - Agent that follows paths using steering behaviors
-
-### Source Files
-- `hw3.cpp` - Main application for pathfinding and path following
-- `SmallGraph.cpp` - Creates and tests a small, meaningful graph (NCSU campus)
-- `LargeGraph.cpp` - Creates and tests a large random graph
-- `Makefile` - Build configuration
+This project demonstrates the implementation of decision trees, behavior trees, and decision tree learning for AI in games. The application builds on the movement and pathfinding code from Homework 2 and 3, adding higher-level decision making.
 
 ## Features
+- **Decision Trees**: Manual implementation of decision trees for agent behavior
+- **Behavior Trees**: Implementation of behavior trees with various node types
+- **Decision Tree Learning**: Learning decision trees from behavior data
+- **Comparative Analysis**: Tools to compare the effectiveness of the different approaches
 
-### Graphs
-- **Small Graph**: Represents NCSU campus with 20 vertices (buildings) and 66 edges (walkways)
-- **Large Graph**: Randomly generated with tens of thousands of vertices and edges
+## Requirements
+- C++17 compatible compiler
+- SFML 2.5 or higher
+- Linux or macOS
 
-### Pathfinding Algorithms
-- **Dijkstra's Algorithm**: Guaranteed to find the shortest path
-- **A* Algorithm**: Optimizes search using heuristic guidance
+## Project Structure
+- `headers/` - Header files
+  - `DecisionTree.h` - Decision tree implementation
+  - `BehaviorTree.h` - Behavior tree implementation
+  - `Monster.h` - Monster entity controlled by AI
+  - `DTLearning.h` - Decision tree learning algorithm
+  - Various headers from HW2 and HW3
+- `source/` - Source files
+  - `DecisionTree.cpp`
+  - `BehaviorTree.cpp`
+  - `Monster.cpp`
+  - `DTLearning.cpp`
+  - Various source files from HW2 and HW3
+- `hw4.cpp` - Main application
+- `Makefile` - Build configuration
 
-### Heuristics
-The project implements several different heuristic functions for the A* algorithm:
-
-1. **Euclidean Distance (Admissible & Consistent)**
-   - Direct straight-line distance between vertices
-   - Never overestimates the true cost, ensuring optimal paths
-   - Used as the default heuristic in the main application
-
-2. **Manhattan Distance (Admissible for Grid-Based Graphs)**
-   - Sum of horizontal and vertical distances
-   - Works well in environments with orthogonal movement
-   - Admissible in grid-based environments but can be inadmissible in general graphs
-
-3. **Cluster Heuristic (Performance Optimization)**
-   - Groups vertices into clusters to accelerate large graph navigation
-   - Uses pre-computed distances between clusters
-   - Falls back to Euclidean distance for vertices in the same cluster
-   - Efficient for large graphs with natural clustering
-
-4. **Inadmissible Heuristic**
-   - Deliberately overestimates costs based on distance
-   - Uses variable overestimation factors (1.5-2.0×) based on distance
-   - Adds random variation for non-deterministic behavior
-   - Sacrifices path optimality for potentially faster pathfinding
-   - Used to demonstrate effects of inadmissibility on A* performance
-
-5. **Directional Bias Heuristic (Inadmissible)**
-   - Systematically applies different weights to horizontal vs. vertical movement
-   - Vertical movement is penalized more heavily (2.0× vs 1.2× for horizontal)
-   - Creates directionally biased paths that prefer horizontal movement
-   - Demonstrates how directional preferences can be encoded in pathfinding
-
-The heuristics are designed to showcase the trade-offs between optimality, efficiency, and path characteristics in A* pathfinding.
-
-### Indoor Environment
-- Multiple rooms connected by doorways
-- Obstacles placed within rooms
-- Graph-based navigation
-- Click-to-navigate interface
-
-### Path Following
-- Arrive behavior for smooth approach to waypoints
-- Align behavior for orientation matching
-- Visual breadcrumb trail to show path
-
-## Compilation
-Run the following command in the terminal from the project directory:
-
-```
+## Building the Project
+To build the project, run:
+```bash
 make
 ```
 
-This will produce three executables:
-- `hw3` - Main pathfinding and path following application
-- `small_graph` - Small graph visualization and testing
-- `large_graph` - Large graph generation and performance testing
+This will compile all source files and create the executable `hw4`.
 
-## Execution
-
-### Main Application
+## Running the Project
+To run the project, execute:
+```bash
+./hw4
 ```
-./hw3
-```
-This opens the interactive pathfinding and path following demo.
-- Left-click: Find and follow path using A* with Euclidean heuristic
-- Right-click: Find and follow path using Dijkstra's algorithm
-- R: Reset agent position
-- ESC: Exit application
 
-### Small Graph Test
-```
-./small_graph
-```
-This visualizes the small graph (NCSU campus map) and runs test paths.
-- Red path: Dijkstra's algorithm
-- Green path: A* with Euclidean heuristic
-- Blue path: A* with inadmissible heuristic
+## Controls
+- **Left-click**: Set player destination
+- **R**: Reset positions
+- **1**: Record behavior tree data (toggle)
+- **2**: Learn decision tree from recorded data
+- **3**: Toggle monster type (behavior tree, decision tree, or both)
+- **ESC**: Exit application
 
-### Large Graph Test
-```
-./large_graph
-```
-This generates a large random graph and runs performance comparisons between algorithms.
+## Implementation Details
 
-## Implementation Notes
+### Decision Tree
+The decision tree implementation allows agents to make decisions based on environmental conditions such as:
+- Distance to the player
+- Current velocity
+- Whether obstacles are nearby
+- Whether the player is visible
+- Time spent in current state
 
-### Small Graph
-The small graph represents a simplified map of NCSU campus with buildings and walkways. Each vertex represents a building or landmark, and edges represent walkways with weights based on arbitrary walking times.
+Actions controlled by the decision tree include:
+- Path finding to the player
+- Wandering
+- Dancing
+- Idling
 
-### Large Graph 
-The large graph is randomly generated with tens of thousands of vertices and edges to stress-test the pathfinding algorithms and measure their scaling behavior.
+### Behavior Tree
+The behavior tree implementation includes several node types:
+- **Sequence**: Executes children in order until one fails
+- **Selector**: Tries children in order until one succeeds
+- **Inverter**: Inverts the result of its child
+- **Repeater**: Repeats its child a specified number of times
+- **Parallel**: Executes all children simultaneously
 
-### Environment
-The indoor environment is divided into a grid where walkable cells become vertices in the navigation graph. Obstacles and walls block movement, and the agent uses pathfinding to plan routes around them.
+The monster's behavior tree includes logic for:
+- Chasing the player when visible
+- Wandering when no other actions are available
+- Occasionally performing a dance
+
+### Decision Tree Learning
+The decision tree learning implementation uses the ID3 algorithm to learn a decision tree from recorded behavior data. The algorithm:
+1. Calculates entropy and information gain for each attribute
+2. Selects the attribute with the highest information gain
+3. Recursively builds subtrees for each value of the selected attribute
 
 ## Author
 Miles Hollifield
