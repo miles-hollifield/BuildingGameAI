@@ -61,40 +61,36 @@ protected:
 };
 
 /**
- * @class ActionNode
+ * @class BehaviorActionNode
  * @brief Leaf node that represents an action to perform
  */
-class ActionNode : public BehaviorNode
-{
+class BehaviorActionNode : public BehaviorNode {
 public:
     /**
      * @brief Constructor for action node
      * @param action Function that performs the action and returns status
      * @param name Name of the action (for debugging)
      */
-    ActionNode(std::function<BehaviorStatus()> action, const std::string &name)
-        : action(action)
-    {
+    BehaviorActionNode(std::function<BehaviorStatus()> action, const std::string& name)
+        : action(action) {
         nodeName = "Action: " + name;
     }
-
+    
     /**
      * @brief Execute the action
      * @return Status of the action execution
      */
-    BehaviorStatus tick() override
-    {
+    BehaviorStatus tick() override {
         return action();
     }
-
+    
     /**
      * @brief Reset the node's state
      */
-    void reset() override
-    {
+    void reset() override {
         // Most action nodes are stateless, so nothing to reset
     }
-
+    
 private:
     std::function<BehaviorStatus()> action;
 };

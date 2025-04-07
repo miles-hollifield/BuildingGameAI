@@ -232,6 +232,15 @@ public:
     }
 
     /**
+     * @brief Get the current kinematic data of the agent.
+     * @return Reference to the kinematic data
+     */
+    const Kinematic &getKinematic() const
+    {
+        return character;
+    }
+
+    /**
      * @brief Draw the agent and its path on the window.
      * @param window The window to draw to.
      */
@@ -279,10 +288,10 @@ private:
     std::vector<sf::Vector2f> path; // The path to follow
     int currentWaypoint;            // Index of the current waypoint
 
-    std::deque<Breadcrumb> breadcrumbs;            // Breadcrumbs for visualizing the path
-    int breadcrumbCounter;                         // Counter for breadcrumb dropping
+    std::deque<Breadcrumb> breadcrumbs;             // Breadcrumbs for visualizing the path
+    int breadcrumbCounter;                          // Counter for breadcrumb dropping
     static constexpr int BREADCRUMB_INTERVAL = 120; // Frames between dropping breadcrumbs
-    static constexpr int MAX_BREADCRUMBS = 50;     // Maximum number of breadcrumbs
+    static constexpr int MAX_BREADCRUMBS = 50;      // Maximum number of breadcrumbs
 
     /**
      * @brief Drop breadcrumbs to visualize the agent's path.

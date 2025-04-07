@@ -532,114 +532,113 @@ std::shared_ptr<BehaviorTree> createMonsterBehaviorTree(Monster &monster)
     auto behaviorTree = std::make_shared<BehaviorTree>();
 
     // Create actions
-    auto pathfindToPlayerAction = std::make_shared<ActionNode>(
-        [&monster]()
-        {
+    auto pathfindToPlayerAction = std::make_shared<BehaviorActionNode>(
+        [&monster]() {
             monster.executeAction("PathfindToPlayer", 0.0f);
             return BehaviorStatus::SUCCESS;
         },
-        "PathfindToPlayer");
+        "PathfindToPlayer"
+    );
 
-    auto wanderAction = std::make_shared<ActionNode>(
-        [&monster]()
-        {
+    auto wanderAction = std::make_shared<BehaviorActionNode>(
+        [&monster]() {
             monster.executeAction("Wander", 0.0f);
             return BehaviorStatus::SUCCESS;
         },
-        "Wander");
-
-    auto danceAction = std::make_shared<ActionNode>(
-        [&monster]()
-        {
+        "Wander"
+    );
+    
+    auto danceAction = std::make_shared<BehaviorActionNode>(
+        [&monster]() {
             monster.executeAction("Dance", 0.0f);
             return BehaviorStatus::SUCCESS;
         },
-        "Dance");
-
-    auto idleAction = std::make_shared<ActionNode>(
-        [&monster]()
-        {
+        "Dance"
+    );
+    
+    auto idleAction = std::make_shared<BehaviorActionNode>(
+        [&monster]() {
             monster.executeAction("Idle", 0.0f);
             return BehaviorStatus::SUCCESS;
         },
-        "Idle");
+        "Idle"
+    );
 
     // Create conditions
     auto isNearPlayerCondition = std::make_shared<ConditionNode>(
-        [&monster]()
-        {
+        [&monster]() -> bool {
             // Check if monster is close to player
             const float NEAR_DISTANCE = 150.0f;
-            return monster.hasCaughtPlayer() ||
-                   (monster.getKinematic().position - monster.getPlayerKinematic().position).length() < NEAR_DISTANCE;
+            return monster.hasCaughtPlayer() || 
+                   (monster.getPosition() - monster.getPlayerKinematic().position).length() < NEAR_DISTANCE;
         },
-        "IsNearPlayer");
+        "IsNearPlayer"
+    );
 
     auto canSeePlayerCondition = std::make_shared<ConditionNode>(
-        [&monster]()
-        {
+        [&monster]() -> bool {
             // Simple implementation: just check if player is in a 45-degree cone in front of monster
             sf::Vector2f toPlayer = monster.getPlayerKinematic().position - monster.getKinematic().position;
             float distance = std::sqrt(toPlayer.x * toPlayer.x + toPlayer.y * toPlayer.y);
-
-            if (distance < 1.0f)
-                return true; // Player is at same position
-
+            
+            if (distance < 1.0f) return true; // Player is at same position
+            
             // Normalize
             toPlayer /= distance;
-
+            
             // Get forward vector of monster
             float radians = monster.getKinematic().orientation * 3.14159f / 180.0f;
             sf::Vector2f forward(std::cos(radians), std::sin(radians));
-
+            
             // Dot product to find cos of angle between vectors
             float dot = forward.x * toPlayer.x + forward.y * toPlayer.y;
-
+            
             // If dot > cos(45°), player is within 45° cone in front of monster
             return dot > 0.7071f; // cos(45°) = 0.7071
         },
-        "CanSeePlayer");
-
+        "CanSeePlayer"
+    );
+    
     auto hasDancedRecentlyCondition = std::make_shared<ConditionNode>(
-        [&monster]()
-        {
+        [&monster]() -> bool {
             // This condition would normally check a timer
             // For simplicity, we'll use a random chance (10%)
             return (rand() % 100) < 10;
         },
-        "HasDancedRecently");
-
+        "HasDancedRecently"
+    );
+    
     auto shouldDanceCondition = std::make_shared<ConditionNode>(
-        [&monster]()
-        {
+        [&monster]() -> bool {
             // Random chance to dance (5%)
             return (rand() % 100) < 5;
         },
-        "ShouldDance");
-
-    // Create composite nodes
-
+        "ShouldDance"
+    );
+    
+    // Now the composite nodes that use these conditions
+    
     // Chase sequence: If we can see the player, pathfind to them
     auto chaseSequence = std::make_shared<SequenceNode>("Chase Sequence");
     chaseSequence->addChild(canSeePlayerCondition);
     chaseSequence->addChild(pathfindToPlayerAction);
-
+    
     // Dance sequence: If we should dance and haven't recently, do a dance
     auto danceSequence = std::make_shared<SequenceNode>("Dance Sequence");
     danceSequence->addChild(shouldDanceCondition);
     danceSequence->addChild(std::make_shared<InverterNode>(hasDancedRecentlyCondition));
     danceSequence->addChild(danceAction);
-
+    
     // Wander fallback: If nothing else to do, wander
     auto wanderFallback = std::make_shared<SelectorNode>("Wander Fallback");
     wanderFallback->addChild(danceSequence);
     wanderFallback->addChild(wanderAction);
-
+    
     // Main selector
     auto rootSelector = std::make_shared<SelectorNode>("Root Selector");
     rootSelector->addChild(chaseSequence);
     rootSelector->addChild(wanderFallback);
-
+    
     // Set the root node
     behaviorTree->setRootNode(rootSelector);
 

@@ -103,16 +103,20 @@ public:
     const Kinematic &getKinematic() const;
 
     /**
-     * @brief Check if the monster has caught the player
-     * @return True if the monster is close enough to the player
+     * @brief Get the player's kinematic data
+     * @return Const reference to the player's kinematic data
      */
-    bool hasCaughtPlayer() const;
+    const Kinematic &getPlayerKinematic() const
+    {
+        return *playerKinematic;
+    }
 
     /**
-     * @brief Record current state and action for decision tree learning
-     * @param outputFile File to record to
+     * @brief Execute a specific action
+     * @param action The action to execute
+     * @param deltaTime Time since last update
      */
-    void recordStateAction(std::ofstream &outputFile);
+    void executeAction(const std::string &action, float deltaTime);
 
 private:
     // Entity data
