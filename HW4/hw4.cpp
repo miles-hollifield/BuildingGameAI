@@ -37,11 +37,71 @@
 #include "headers/DTLearning.h"
 
 // Forward declarations
-Environment createGameEnvironment(int width, int height);
+Environment createIndoorEnvironment(int width, int height);
 std::shared_ptr<BehaviorTree> createMonsterBehaviorTree(Monster &monster);
 std::shared_ptr<DecisionTree> createCharacterDecisionTree(EnvironmentState &state);
 std::shared_ptr<DecisionTree> learnDecisionTreeFromBehaviorTree(const std::string &dataFile);
 void recordBehaviorTreeData(Monster &monster, const std::string &outputFile, int frames);
+
+/**
+ * @brief Creates an indoor environment with multiple rooms and obstacles.
+ * @param width Width of the environment.
+ * @param height Height of the environment.
+ * @return Environment object with rooms and obstacles.
+ */
+Environment createIndoorEnvironment(int width, int height)
+{
+    Environment env(width, height);
+
+    // Create a large background room that encompasses the entire space
+    env.addRoom(sf::FloatRect(30, 30, 580, 420));
+
+    // Add walls to define rooms with openings for doorways
+
+    // Top horizontal divider with doorway gap
+    env.addObstacle(sf::FloatRect(30, 170, 250, 10));  // Left section
+    env.addObstacle(sf::FloatRect(330, 170, 280, 10)); // Right section
+
+    // Vertical divider with two doorway gaps
+    env.addObstacle(sf::FloatRect(330, 30, 10, 90));   // Top section
+    env.addObstacle(sf::FloatRect(330, 210, 10, 120)); // Middle section
+    env.addObstacle(sf::FloatRect(330, 370, 10, 80));  // Bottom section
+
+    // Left vertical divider with doorway
+    env.addObstacle(sf::FloatRect(170, 170, 10, 120)); // Upper section
+    env.addObstacle(sf::FloatRect(170, 330, 10, 120)); // Lower section
+
+    // Right vertical divider with doorway
+    env.addObstacle(sf::FloatRect(490, 170, 10, 120)); // Upper section
+    env.addObstacle(sf::FloatRect(490, 330, 10, 120)); // Lower section
+
+    // Bottom horizontal divider with doorway gaps
+    env.addObstacle(sf::FloatRect(30, 330, 90, 10));  // Left section
+    env.addObstacle(sf::FloatRect(210, 330, 80, 10)); // Middle-left section
+    env.addObstacle(sf::FloatRect(370, 330, 80, 10)); // Middle-right section
+    env.addObstacle(sf::FloatRect(530, 330, 80, 10)); // Right section
+
+    // Add obstacles within rooms
+
+    // Top-right room obstacles
+    env.addObstacle(sf::FloatRect(410, 80, 30, 40));
+
+    // Middle-left room obstacles
+    env.addObstacle(sf::FloatRect(80, 240, 40, 30));
+
+    // Middle-center room obstacles
+    env.addObstacle(sf::FloatRect(260, 240, 30, 50));
+
+    // Middle-right room obstacles
+    env.addObstacle(sf::FloatRect(400, 240, 50, 40));
+
+    // Bottom row room obstacles
+    env.addObstacle(sf::FloatRect(120, 380, 30, 30));
+    env.addObstacle(sf::FloatRect(270, 380, 25, 35));
+    env.addObstacle(sf::FloatRect(530, 380, 40, 25));
+
+    return env;
+}
 
 /**
  * @brief Main function
@@ -49,65 +109,42 @@ void recordBehaviorTreeData(Monster &monster, const std::string &outputFile, int
 int main()
 {
     // Create window
-    int windowWidth = 800;
-    int windowHeight = 600;
+    int windowWidth = 640;
+    int windowHeight = 480;
     sf::RenderWindow window(sf::VideoMode(windowWidth, windowHeight),
                             "CSC 584/484 - HW4: Decision Trees and Behavior Trees");
 
-    // Load textures
-    sf::Texture playerTexture;
-    sf::Texture monsterTexture;
-    sf::Texture monsterLearnerTexture;
-
-    if (!playerTexture.loadFromFile("player.png"))
+    // Load texture for the agents
+    sf::Texture agentTexture;
+    if (!agentTexture.loadFromFile("boid.png"))
     {
-        std::cerr << "Failed to load player.png! Creating fallback texture." << std::endl;
+        std::cerr << "Failed to load boid.png! Creating fallback texture." << std::endl;
         // Create a fallback texture
-        playerTexture.create(32, 32);
+        agentTexture.create(32, 32);
         sf::Image img;
         img.create(32, 32, sf::Color::Green);
-        playerTexture.update(img);
+        agentTexture.update(img);
     }
 
-    if (!monsterTexture.loadFromFile("monster.png"))
-    {
-        std::cerr << "Failed to load monster.png! Creating fallback texture." << std::endl;
-        // Create a fallback texture
-        monsterTexture.create(32, 32);
-        sf::Image img;
-        img.create(32, 32, sf::Color::Red);
-        monsterTexture.update(img);
-    }
-
-    if (!monsterLearnerTexture.loadFromFile("monster_learner.png"))
-    {
-        std::cerr << "Failed to load monster_learner.png! Creating fallback texture." << std::endl;
-        // Create a fallback texture
-        monsterLearnerTexture.create(32, 32);
-        sf::Image img;
-        img.create(32, 32, sf::Color::Blue);
-        monsterLearnerTexture.update(img);
-    }
-
-    // Create environment
-    Environment environment = createGameEnvironment(windowWidth, windowHeight);
+    // Create environment using the indoor environment from HW3
+    Environment environment = createIndoorEnvironment(windowWidth, windowHeight);
 
     // Create graph representation of the environment
     Graph environmentGraph = environment.createGraph(20); // 20px grid cells
 
     // Create player
     sf::Vector2f playerStartPos(100, 100);
-    PathFollower player(playerStartPos, playerTexture);
+    PathFollower player(playerStartPos, agentTexture);
 
-    // Create behavior tree monster
-    sf::Vector2f monsterStartPos(600, 500);
-    Monster behaviorTreeMonster(monsterStartPos, monsterTexture, environment, environmentGraph);
+    // Create behavior tree monster - position in bottom-left room instead of bottom-right (which had an obstacle)
+    sf::Vector2f monsterStartPos(400, 400);
+    Monster behaviorTreeMonster(monsterStartPos, agentTexture, environment, environmentGraph, sf::Color::Red);
     behaviorTreeMonster.setPlayerKinematic(player.getKinematic());
     behaviorTreeMonster.setControlType(Monster::ControlType::BEHAVIOR_TREE);
 
-    // Create learned decision tree monster
-    sf::Vector2f learnerStartPos(600, 100);
-    Monster decisionTreeMonster(learnerStartPos, monsterLearnerTexture, environment, environmentGraph);
+    // Create learned decision tree monster - position in top-right room (adjusted to avoid obstacle)
+    sf::Vector2f learnerStartPos(450, 140);
+    Monster decisionTreeMonster(learnerStartPos, agentTexture, environment, environmentGraph, sf::Color::Blue);
     decisionTreeMonster.setPlayerKinematic(player.getKinematic());
     decisionTreeMonster.setControlType(Monster::ControlType::DECISION_TREE);
 
@@ -312,11 +349,11 @@ int main()
                         // Use A* to find a path
                         AStar astar([](int current, int goal, const Graph &g)
                                     {
-                             sf::Vector2f currentPos = g.getVertexPosition(current);
-                             sf::Vector2f goalPos = g.getVertexPosition(goal);
-                             float dx = goalPos.x - currentPos.x;
-                             float dy = goalPos.y - currentPos.y;
-                             return std::sqrt(dx * dx + dy * dy); });
+                              sf::Vector2f currentPos = g.getVertexPosition(current);
+                              sf::Vector2f goalPos = g.getVertexPosition(goal);
+                              float dx = goalPos.x - currentPos.x;
+                              float dy = goalPos.y - currentPos.y;
+                              return std::sqrt(dx * dx + dy * dy); });
 
                         std::vector<int> path = astar.findPath(environmentGraph, startVertex, goalVertex);
 
@@ -480,51 +517,6 @@ int main()
 }
 
 /**
- * @brief Create the game environment with rooms and obstacles
- */
-Environment createGameEnvironment(int width, int height)
-{
-    Environment env(width, height);
-
-    // Add main room
-    env.addRoom(sf::FloatRect(50, 50, width - 100, height - 100));
-
-    // Add inner walls to create a maze-like structure
-
-    // Horizontal walls
-    env.addObstacle(sf::FloatRect(50, 200, 300, 20));
-    env.addObstacle(sf::FloatRect(450, 200, 300, 20));
-
-    env.addObstacle(sf::FloatRect(50, 400, 300, 20));
-    env.addObstacle(sf::FloatRect(450, 400, 300, 20));
-
-    // Vertical walls
-    env.addObstacle(sf::FloatRect(200, 50, 20, 150));
-    env.addObstacle(sf::FloatRect(200, 420, 20, 130));
-
-    env.addObstacle(sf::FloatRect(400, 50, 20, 150));
-    env.addObstacle(sf::FloatRect(400, 220, 20, 180));
-
-    env.addObstacle(sf::FloatRect(600, 50, 20, 150));
-    env.addObstacle(sf::FloatRect(600, 220, 20, 180));
-
-    // Add obstacles
-    env.addObstacle(sf::FloatRect(100, 100, 40, 40));
-    env.addObstacle(sf::FloatRect(300, 150, 40, 40));
-    env.addObstacle(sf::FloatRect(500, 100, 40, 40));
-
-    env.addObstacle(sf::FloatRect(100, 300, 40, 40));
-    env.addObstacle(sf::FloatRect(300, 300, 40, 40));
-    env.addObstacle(sf::FloatRect(500, 300, 40, 40));
-
-    env.addObstacle(sf::FloatRect(100, 500, 40, 40));
-    env.addObstacle(sf::FloatRect(300, 450, 40, 40));
-    env.addObstacle(sf::FloatRect(500, 500, 40, 40));
-
-    return env;
-}
-
-/**
  * @brief Create a behavior tree for the monster
  */
 std::shared_ptr<BehaviorTree> createMonsterBehaviorTree(Monster &monster)
@@ -533,112 +525,114 @@ std::shared_ptr<BehaviorTree> createMonsterBehaviorTree(Monster &monster)
 
     // Create actions
     auto pathfindToPlayerAction = std::make_shared<BehaviorActionNode>(
-        [&monster]() {
+        [&monster]()
+        {
             monster.executeAction("PathfindToPlayer", 0.0f);
             return BehaviorStatus::SUCCESS;
         },
-        "PathfindToPlayer"
-    );
+        "PathfindToPlayer");
 
     auto wanderAction = std::make_shared<BehaviorActionNode>(
-        [&monster]() {
+        [&monster]()
+        {
             monster.executeAction("Wander", 0.0f);
             return BehaviorStatus::SUCCESS;
         },
-        "Wander"
-    );
-    
+        "Wander");
+
     auto danceAction = std::make_shared<BehaviorActionNode>(
-        [&monster]() {
+        [&monster]()
+        {
             monster.executeAction("Dance", 0.0f);
             return BehaviorStatus::SUCCESS;
         },
-        "Dance"
-    );
-    
+        "Dance");
+
     auto idleAction = std::make_shared<BehaviorActionNode>(
-        [&monster]() {
+        [&monster]()
+        {
             monster.executeAction("Idle", 0.0f);
             return BehaviorStatus::SUCCESS;
         },
-        "Idle"
-    );
+        "Idle");
 
     // Create conditions
     auto isNearPlayerCondition = std::make_shared<ConditionNode>(
-        [&monster]() -> bool {
+        [&monster]() -> bool
+        {
             // Check if monster is close to player
             const float NEAR_DISTANCE = 150.0f;
-            return monster.hasCaughtPlayer() || 
-                   (monster.getPosition() - monster.getPlayerKinematic().position).length() < NEAR_DISTANCE;
+            return monster.hasCaughtPlayer() ||
+                   std::sqrt(std::pow(monster.getPosition().x - monster.getPlayerKinematic().position.x, 2) +
+                             std::pow(monster.getPosition().y - monster.getPlayerKinematic().position.y, 2)) < NEAR_DISTANCE;
         },
-        "IsNearPlayer"
-    );
+        "IsNearPlayer");
 
     auto canSeePlayerCondition = std::make_shared<ConditionNode>(
-        [&monster]() -> bool {
+        [&monster]() -> bool
+        {
             // Simple implementation: just check if player is in a 45-degree cone in front of monster
             sf::Vector2f toPlayer = monster.getPlayerKinematic().position - monster.getKinematic().position;
             float distance = std::sqrt(toPlayer.x * toPlayer.x + toPlayer.y * toPlayer.y);
-            
-            if (distance < 1.0f) return true; // Player is at same position
-            
+
+            if (distance < 1.0f)
+                return true; // Player is at same position
+
             // Normalize
             toPlayer /= distance;
-            
+
             // Get forward vector of monster
             float radians = monster.getKinematic().orientation * 3.14159f / 180.0f;
             sf::Vector2f forward(std::cos(radians), std::sin(radians));
-            
+
             // Dot product to find cos of angle between vectors
             float dot = forward.x * toPlayer.x + forward.y * toPlayer.y;
-            
+
             // If dot > cos(45°), player is within 45° cone in front of monster
             return dot > 0.7071f; // cos(45°) = 0.7071
         },
-        "CanSeePlayer"
-    );
-    
+        "CanSeePlayer");
+
     auto hasDancedRecentlyCondition = std::make_shared<ConditionNode>(
-        [&monster]() -> bool {
+        [&monster]() -> bool
+        {
             // This condition would normally check a timer
             // For simplicity, we'll use a random chance (10%)
             return (rand() % 100) < 10;
         },
-        "HasDancedRecently"
-    );
-    
+        "HasDancedRecently");
+
     auto shouldDanceCondition = std::make_shared<ConditionNode>(
-        [&monster]() -> bool {
+        [&monster]() -> bool
+        {
             // Random chance to dance (5%)
             return (rand() % 100) < 5;
         },
-        "ShouldDance"
-    );
-    
+        "ShouldDance");
+
     // Now the composite nodes that use these conditions
-    
+
     // Chase sequence: If we can see the player, pathfind to them
     auto chaseSequence = std::make_shared<SequenceNode>("Chase Sequence");
     chaseSequence->addChild(canSeePlayerCondition);
     chaseSequence->addChild(pathfindToPlayerAction);
-    
+
     // Dance sequence: If we should dance and haven't recently, do a dance
     auto danceSequence = std::make_shared<SequenceNode>("Dance Sequence");
     danceSequence->addChild(shouldDanceCondition);
     danceSequence->addChild(std::make_shared<InverterNode>(hasDancedRecentlyCondition));
     danceSequence->addChild(danceAction);
-    
+
     // Wander fallback: If nothing else to do, wander
     auto wanderFallback = std::make_shared<SelectorNode>("Wander Fallback");
     wanderFallback->addChild(danceSequence);
     wanderFallback->addChild(wanderAction);
-    
+
     // Main selector
     auto rootSelector = std::make_shared<SelectorNode>("Root Selector");
     rootSelector->addChild(chaseSequence);
     rootSelector->addChild(wanderFallback);
-    
+
     // Set the root node
     behaviorTree->setRootNode(rootSelector);
 
@@ -652,9 +646,9 @@ std::shared_ptr<DecisionTree> createCharacterDecisionTree(EnvironmentState &stat
 {
     auto decisionTree = std::make_shared<DecisionTree>(state);
 
-    // Create potential target positions
+    // Create potential target positions adjusted for environment size
     std::vector<sf::Vector2f> potentialTargets = {
-        {100, 100}, {700, 100}, {400, 300}, {100, 500}, {700, 500}};
+        {100, 100}, {500, 100}, {250, 250}, {100, 350}, {500, 350}};
 
     // Build a sample decision tree
     decisionTree->buildSampleTree(potentialTargets);
@@ -768,7 +762,7 @@ void recordBehaviorTreeData(Monster &monster, const std::string &outputFile, int
          << "TimeInCurrentAction,Action" << std::endl;
 
     // Create window for simulation
-    sf::RenderWindow window(sf::VideoMode(800, 600), "Recording Data");
+    sf::RenderWindow window(sf::VideoMode(640, 480), "Recording Data");
 
     // Clock for delta time
     sf::Clock clock;

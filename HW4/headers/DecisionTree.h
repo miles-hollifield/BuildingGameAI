@@ -187,7 +187,7 @@ public:
      * @brief Make a decision by evaluating the tree
      * @return String representing the decided action
      */
-    std::string makeDecision();
+    virtual std::string makeDecision();
 
     /**
      * @brief Build a sample decision tree for controlling character movement

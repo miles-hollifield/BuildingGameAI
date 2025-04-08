@@ -14,7 +14,7 @@
 #include <iostream>
 #include <fstream>
 
-Monster::Monster(sf::Vector2f startPosition, sf::Texture &texture, Environment &environment, Graph &graph)
+Monster::Monster(sf::Vector2f startPosition, sf::Texture &texture, Environment &environment, Graph &graph, sf::Color color)
     : monsterKinematic(startPosition),
       startPosition(startPosition),
       environment(environment),
@@ -33,15 +33,18 @@ Monster::Monster(sf::Vector2f startPosition, sf::Texture &texture, Environment &
 {
     // Initialize sprite
     sprite.setTexture(texture);
-    sprite.setScale(0.07f, 0.07f); // Adjust scale as needed
+    sprite.setScale(0.05f, 0.05f); // Reduced scale to match player size
     sprite.setOrigin(texture.getSize().x / 2.0f, texture.getSize().y / 2.0f);
     sprite.setPosition(startPosition);
+    
+    // Set the sprite color to distinguish it from the player
+    sprite.setColor(color);
 
     // Set up dance path (a simple circle)
     for (int i = 0; i < 12; i++)
     {
         float angle = i * 2 * 3.14159f / 12;
-        float radius = 50.0f;
+        float radius = 30.0f; // Smaller dance radius to match smaller scale
         sf::Vector2f point = startPosition + sf::Vector2f(std::cos(angle) * radius, std::sin(angle) * radius);
         dancePath.push_back(point);
     }
