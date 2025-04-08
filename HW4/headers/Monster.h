@@ -16,6 +16,9 @@
 #include <SFML/Graphics.hpp>
 #include <vector>
 #include <string>
+#include <fstream>
+#include <deque>
+#include <memory>
 #include "headers/Kinematic.h"
 #include "headers/Arrive.h"
 #include "headers/Align.h"
@@ -45,8 +48,10 @@ public:
      * @param texture Texture for the monster's sprite
      * @param environment Reference to the environment
      * @param graph Reference to the navigation graph
+     * @param color Optional color to apply to the sprite (defaults to red)
      */
-    Monster(sf::Vector2f startPosition, sf::Texture &texture, Environment &environment, Graph &graph);
+    Monster(sf::Vector2f startPosition, sf::Texture &texture, Environment &environment, Graph &graph,
+            sf::Color color = sf::Color::Red);
 
     /**
      * @brief Set the control type for the monster
@@ -118,6 +123,18 @@ public:
      */
     void executeAction(const std::string &action, float deltaTime);
 
+    /**
+     * @brief Check if the monster has caught the player
+     * @return True if the monster has caught the player
+     */
+    bool hasCaughtPlayer() const;
+
+    /**
+     * @brief Record the current state and action to a file
+     * @param outputFile Output stream to write to
+     */
+    void recordStateAction(std::ofstream &outputFile);
+
 private:
     // Entity data
     Kinematic monsterKinematic;
@@ -155,7 +172,6 @@ private:
     float danceTimer;
 
     // Helper methods
-    void executeAction(const std::string &action, float deltaTime);
     void pathfindToPlayer();
     void wander(float deltaTime);
     void followPath(float deltaTime);
