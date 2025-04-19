@@ -56,10 +56,7 @@ void SequenceNode::reset()
 
 // SelectorNode implementation
 BehaviorStatus SelectorNode::tick()
-{
-    std::cout << "SELECTOR [" << nodeName << "]: Starting tick, currentChild = " 
-              << currentChild << ", isRunning = " << (isRunning ? "true" : "false") << std::endl;
-              
+{        
     // If not running, start from the beginning
     if (!isRunning) {
         currentChild = 0;
@@ -67,15 +64,8 @@ BehaviorStatus SelectorNode::tick()
     
     // Continue from where we left off
     while (currentChild < children.size())
-    {
-        std::cout << "SELECTOR [" << nodeName << "]: Trying child " << currentChild 
-                  << " (" << children[currentChild]->getName() << ")" << std::endl;
-                  
+    {      
         BehaviorStatus status = children[currentChild]->tick();
-        
-        std::cout << "SELECTOR [" << nodeName << "]: Child " << currentChild 
-                  << " returned status " << (status == BehaviorStatus::SUCCESS ? "SUCCESS" : 
-                  (status == BehaviorStatus::FAILURE ? "FAILURE" : "RUNNING")) << std::endl;
 
         if (status == BehaviorStatus::RUNNING)
         {
@@ -94,7 +84,6 @@ BehaviorStatus SelectorNode::tick()
     }
 
     // All children failed
-    std::cout << "SELECTOR [" << nodeName << "]: All children failed" << std::endl;
     isRunning = false;
     return BehaviorStatus::FAILURE;
 }

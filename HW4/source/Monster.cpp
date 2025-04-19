@@ -300,12 +300,14 @@ void Monster::executeAction(const std::string &action, float deltaTime)
     }
 }
 
-void Monster::pathfindToPlayer()
-{
-    if (!playerKinematic)
-    {
+void Monster::pathfindToPlayer() {
+    if (!playerKinematic) {
+        std::cout << "PATHFIND: No player kinematic set!" << std::endl;
         return;
     }
+
+    std::cout << "PATHFIND: Finding path to player at " 
+              << playerKinematic->position.x << "," << playerKinematic->position.y << std::endl;
 
     // Convert positions to graph vertices
     int monsterVertex = environment.pointToVertex(monsterKinematic.position);
@@ -317,10 +319,16 @@ void Monster::pathfindToPlayer()
     // Find path
     std::vector<int> path = pathfinder.findPath(navigationGraph, monsterVertex, playerVertex);
 
+    if (path.empty()) {
+        std::cout << "PATHFIND: No path found to player!" << std::endl;
+        return;
+    }
+
+    std::cout << "PATHFIND: Found path with " << path.size() << " waypoints" << std::endl;
+
     // Convert path to waypoints
     currentPath.clear();
-    for (int vertex : path)
-    {
+    for (int vertex : path) {
         currentPath.push_back(navigationGraph.getVertexPosition(vertex));
     }
 
@@ -420,11 +428,9 @@ void Monster::wander(float deltaTime)
     }
 }
 
-void Monster::followPath(float deltaTime)
-{
+void Monster::followPath(float deltaTime) {
     // Check if we have a path
-    if (currentPath.empty() || currentWaypointIndex >= currentPath.size())
-    {
+    if (currentPath.empty() || currentWaypointIndex >= currentPath.size()) {
         return;
     }
 
@@ -439,11 +445,12 @@ void Monster::followPath(float deltaTime)
     sf::Vector2f direction = targetPos - monsterKinematic.position;
     float distance = std::sqrt(direction.x * direction.x + direction.y * direction.y);
 
-    // Calculate desired orientation
-    if (distance > 0.1f)
-    {
-        float angle = std::atan2(direction.y, direction.x) * 180.0f / 3.14159f;
-        targetKinematic.orientation = angle;
+    if (distance > 0.1f) {
+        // Normalize direction vector
+        direction /= distance;
+        // Set orientation directly toward the current waypoint
+        float desiredOrientation = std::atan2(direction.y, direction.x) * (180.0f / 3.14159265f);
+        targetKinematic.orientation = desiredOrientation;
     }
 
     // Apply arrive behavior to move to waypoint
@@ -457,29 +464,28 @@ void Monster::followPath(float deltaTime)
     monsterKinematic.velocity += steering.linear * deltaTime;
     monsterKinematic.rotation += steering.angular * deltaTime;
 
-    // Calculate proposed position with collision check
-    sf::Vector2f proposedPosition = monsterKinematic.position + monsterKinematic.velocity * deltaTime;
+    // Limit velocity to max speed
+    float currentSpeed = std::sqrt(monsterKinematic.velocity.x * monsterKinematic.velocity.x +
+                                  monsterKinematic.velocity.y * monsterKinematic.velocity.y);
+    const float MAX_SPEED = 150.0f;
+    if (currentSpeed > MAX_SPEED) {
+        monsterKinematic.velocity *= (MAX_SPEED / currentSpeed);
+    }
 
-    if (!checkCollision(proposedPosition))
-    {
-        // Safe to move
-        monsterKinematic.update(deltaTime);
-    }
-    else
-    {
-        // Hit obstacle, stop and recalculate path
-        monsterKinematic.velocity = {0, 0};
-        // Recalculate path if target is player
-        if (playerKinematic)
-        {
-            pathfindToPlayer();
-        }
-    }
+    // Update position and orientation
+    monsterKinematic.update(deltaTime);
 
     // Check if we've reached the waypoint
-    if (distance < 15.0f)
-    {
+    const float WAYPOINT_THRESHOLD = 15.0f;
+    if (distance < WAYPOINT_THRESHOLD) {
+        std::cout << "Monster reached waypoint " << currentWaypointIndex + 1 << "/" << currentPath.size() << std::endl;
         currentWaypointIndex++;
+        
+        // If we've reached the end of the path, reset
+        if (currentWaypointIndex >= currentPath.size()) {
+            currentPath.clear();
+            currentWaypointIndex = 0;
+        }
     }
 }
 

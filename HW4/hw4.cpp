@@ -61,34 +61,34 @@ Environment createIndoorEnvironment(int width, int height)
     // Made doorways wider by shortening walls
 
     // Top horizontal divider with doorway gap
-    env.addObstacle(sf::FloatRect(30, 170, 225, 5));   // Left section (shortened by 25)
-    env.addObstacle(sf::FloatRect(350, 170, 260, 5));  // Right section (moved right by 20)
+    env.addObstacle(sf::FloatRect(30, 170, 225, 5));  // Left section (shortened by 25)
+    env.addObstacle(sf::FloatRect(350, 170, 260, 5)); // Right section (moved right by 20)
 
     // Vertical divider with two doorway gaps
-    env.addObstacle(sf::FloatRect(330, 30, 5, 70));    // Top section (shortened by 20)
-    env.addObstacle(sf::FloatRect(330, 230, 5, 80));   // Middle section (moved down, shortened)
-    env.addObstacle(sf::FloatRect(330, 390, 5, 60));   // Bottom section (moved down, shortened)
+    env.addObstacle(sf::FloatRect(330, 30, 5, 70));  // Top section (shortened by 20)
+    env.addObstacle(sf::FloatRect(330, 230, 5, 80)); // Middle section (moved down, shortened)
+    env.addObstacle(sf::FloatRect(330, 390, 5, 60)); // Bottom section (moved down, shortened)
 
     // Left vertical divider with doorway
-    env.addObstacle(sf::FloatRect(170, 170, 5, 90));   // Upper section (shortened by 30)
-    env.addObstacle(sf::FloatRect(170, 350, 5, 100));  // Lower section (moved down, shortened)
+    env.addObstacle(sf::FloatRect(170, 170, 5, 90));  // Upper section (shortened by 30)
+    env.addObstacle(sf::FloatRect(170, 350, 5, 100)); // Lower section (moved down, shortened)
 
     // Right vertical divider with doorway
-    env.addObstacle(sf::FloatRect(490, 170, 5, 90));   // Upper section (shortened by 30)
-    env.addObstacle(sf::FloatRect(490, 350, 5, 100));  // Lower section (moved down, shortened)
+    env.addObstacle(sf::FloatRect(490, 170, 5, 90));  // Upper section (shortened by 30)
+    env.addObstacle(sf::FloatRect(490, 350, 5, 100)); // Lower section (moved down, shortened)
 
     // Bottom horizontal divider with doorway gaps
-    env.addObstacle(sf::FloatRect(30, 330, 70, 5));    // Left section (shortened by 20)
+    env.addObstacle(sf::FloatRect(30, 330, 70, 5)); // Left section (shortened by 20)
     // Removed middle sections as you did
-    env.addObstacle(sf::FloatRect(540, 330, 70, 5));   // Right section (moved right, shortened)
+    env.addObstacle(sf::FloatRect(540, 330, 70, 5)); // Right section (moved right, shortened)
 
     // Add obstacles within rooms - made smaller
-    
+
     // Top-right room obstacles
-    env.addObstacle(sf::FloatRect(410, 80, 20, 30));  // Reduced from 30x40
+    env.addObstacle(sf::FloatRect(410, 80, 20, 30)); // Reduced from 30x40
 
     // Middle-left room obstacles
-    env.addObstacle(sf::FloatRect(80, 240, 30, 20));  // Reduced from 40x30
+    env.addObstacle(sf::FloatRect(80, 240, 30, 20)); // Reduced from 40x30
 
     // Middle-center room obstacles
     env.addObstacle(sf::FloatRect(260, 240, 20, 35)); // Reduced from 30x50
@@ -533,6 +533,15 @@ std::shared_ptr<BehaviorTree> createMonsterBehaviorTree(Monster &monster)
         },
         "PathfindToPlayer");
 
+    // Create a FollowPath action node
+    auto followPathAction = std::make_shared<BehaviorActionNode>(
+        [&monster]()
+        {
+            monster.executeAction("FollowPath", monster.getDeltaTime());
+            return BehaviorStatus::SUCCESS;
+        },
+        "FollowPath");
+
     auto wanderAction = std::make_shared<BehaviorActionNode>(
         [&monster]()
         {
@@ -549,7 +558,6 @@ std::shared_ptr<BehaviorTree> createMonsterBehaviorTree(Monster &monster)
             // If we're not initialized, start the dance
             if (!state->initialized)
             {
-                std::cout << "DANCE: Initializing dance action" << std::endl;
                 state->initialized = true;
                 state->timer = 0.0f;
                 monster.executeAction("Dance", monster.getDeltaTime());
@@ -562,13 +570,11 @@ std::shared_ptr<BehaviorTree> createMonsterBehaviorTree(Monster &monster)
             // Continue dance while in progress
             if (state->timer < 2.0f)
             {
-                std::cout << "DANCE: Dancing in progress, timer = " << state->timer << std::endl;
                 monster.executeAction("Dance", monster.getDeltaTime());
                 return BehaviorStatus::RUNNING;
             }
 
-            // Dance is complete - print completion message
-            std::cout << "DANCE: Dance completed, returning SUCCESS" << std::endl;
+            // Dance is complete
             state->initialized = false;
             state->timer = 0.0f;
             return BehaviorStatus::SUCCESS;
@@ -585,7 +591,8 @@ std::shared_ptr<BehaviorTree> createMonsterBehaviorTree(Monster &monster)
 
     // Create conditions
     auto canSeePlayerCondition = std::make_shared<ConditionNode>(
-        [&monster]() -> bool
+        [&monster, lastSeenTimer = std::make_shared<float>(0.0f),
+         playerLastSeen = std::make_shared<bool>(false)]() -> bool
         {
             // Get direction to player
             sf::Vector2f monsterPos = monster.getPosition();
@@ -595,15 +602,28 @@ std::shared_ptr<BehaviorTree> createMonsterBehaviorTree(Monster &monster)
             // Calculate distance
             float distance = std::sqrt(toPlayer.x * toPlayer.x + toPlayer.y * toPlayer.y);
 
+            // Update last seen timer
+            *lastSeenTimer += monster.getDeltaTime();
+
             // Can always "see" if extremely close
-            if (distance < 20.0f)
+            if (distance < 30.0f)
+            {
+                if (!*playerLastSeen)
+                {
+                    *playerLastSeen = true;
+                    *lastSeenTimer = 0.0f;
+                }
                 return true;
+            }
 
             // If too far away, can't see
-            if (distance > 200.0f)
+            if (distance > 250.0f)
+            {
+                *playerLastSeen = false;
                 return false;
+            }
 
-            // Check if player is within view cone (120 degrees)
+            // Check if player is within view cone (140 degrees)
             float monsterAngle = monster.getKinematic().orientation * 3.14159f / 180.0f;
             sf::Vector2f monsterDir(std::cos(monsterAngle), std::sin(monsterAngle));
 
@@ -613,13 +633,33 @@ std::shared_ptr<BehaviorTree> createMonsterBehaviorTree(Monster &monster)
             // Dot product gives cosine of angle between vectors
             float dot = monsterDir.x * toPlayer.x + monsterDir.y * toPlayer.y;
 
-            // Check if within 60° (cos(60°) ≈ 0.5)
-            bool withinViewCone = (dot > 0.5f);
+            // Check if within 70° (cos(70°) ≈ 0.342)
+            bool withinViewCone = (dot > 0.342f);
+
+            // If not in view cone, can't see
+            if (!withinViewCone)
+            {
+                *playerLastSeen = false;
+                return false;
+            }
 
             // Check line of sight
             bool lineOfSight = monster.hasLineOfSightTo(playerPos);
 
-            return withinViewCone && lineOfSight;
+            if (!lineOfSight)
+            {
+                *playerLastSeen = false;
+                return false;
+            }
+
+            // If we get here, player is visible
+            if (!*playerLastSeen)
+            {
+                *playerLastSeen = true;
+                *lastSeenTimer = 0.0f;
+            }
+
+            return true;
         },
         "CanSeePlayer");
 
@@ -644,20 +684,19 @@ std::shared_ptr<BehaviorTree> createMonsterBehaviorTree(Monster &monster)
             // Normalize velocity to get direction
             sf::Vector2f moveDir = velocity / speed;
 
-            // Check for obstacles directly ahead at MUCH closer distances
+            // Check for obstacles directly ahead at close distances
             for (float dist = 5.0f; dist <= 20.0f; dist += 5.0f)
             {
                 sf::Vector2f checkPoint = position + moveDir * dist;
                 if (env.isObstacle(checkPoint))
                 {
-                    std::cout << "OBSTACLE: Detected obstacle directly ahead at distance " << dist << std::endl;
                     (*detectionCount)++;
                     // Only flee if we've detected obstacles multiple times in a row
                     return *detectionCount >= 2;
                 }
             }
 
-            // Check in a 45-degree cone around movement direction at closer distances
+            // Check in a 45-degree cone around movement direction
             for (int angleOffset = -45; angleOffset <= 45; angleOffset += 15)
             {
                 if (angleOffset == 0)
@@ -671,10 +710,7 @@ std::shared_ptr<BehaviorTree> createMonsterBehaviorTree(Monster &monster)
                     sf::Vector2f checkPoint = position + rayDir * dist;
                     if (env.isObstacle(checkPoint))
                     {
-                        std::cout << "OBSTACLE: Detected obstacle at angle " << angleOffset
-                                  << " at distance " << dist << std::endl;
                         (*detectionCount)++;
-                        // Only flee if we've detected obstacles multiple times in a row
                         return *detectionCount >= 2;
                     }
                 }
@@ -716,6 +752,7 @@ std::shared_ptr<BehaviorTree> createMonsterBehaviorTree(Monster &monster)
     auto chaseSequence = std::make_shared<SequenceNode>("Chase Sequence");
     chaseSequence->addChild(canSeePlayerCondition);
     chaseSequence->addChild(pathfindToPlayerAction);
+    chaseSequence->addChild(followPathAction);
 
     // Create dance sequence
     auto danceSequence = std::make_shared<SequenceNode>("Dance Sequence");
