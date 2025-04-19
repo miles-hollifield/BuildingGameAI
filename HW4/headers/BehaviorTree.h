@@ -18,6 +18,7 @@
 #include <vector>
 #include <string>
 #include <functional>
+#include <unordered_map>
 #include <SFML/System.hpp>
 #include "headers/Kinematic.h"
 
@@ -29,6 +30,32 @@ enum class BehaviorStatus
     SUCCESS, // Node executed successfully
     FAILURE, // Node execution failed
     RUNNING  // Node is still executing
+};
+
+/**
+ * @struct BehaviorState
+ * @brief Helper struct to maintain state between ticks
+ */
+struct BehaviorState
+{
+    bool initialized = false;
+    float timer = 0.0f;
+    int phase = 0;
+    int counter = 0;
+    std::unordered_map<std::string, float> floatParams;
+    std::unordered_map<std::string, int> intParams;
+    std::unordered_map<std::string, bool> boolParams;
+
+    void reset()
+    {
+        initialized = false;
+        timer = 0.0f;
+        phase = 0;
+        counter = 0;
+        floatParams.clear();
+        intParams.clear();
+        boolParams.clear();
+    }
 };
 
 /**
@@ -64,33 +91,37 @@ protected:
  * @class BehaviorActionNode
  * @brief Leaf node that represents an action to perform
  */
-class BehaviorActionNode : public BehaviorNode {
+class BehaviorActionNode : public BehaviorNode
+{
 public:
     /**
      * @brief Constructor for action node
      * @param action Function that performs the action and returns status
      * @param name Name of the action (for debugging)
      */
-    BehaviorActionNode(std::function<BehaviorStatus()> action, const std::string& name)
-        : action(action) {
+    BehaviorActionNode(std::function<BehaviorStatus()> action, const std::string &name)
+        : action(action)
+    {
         nodeName = "Action: " + name;
     }
-    
+
     /**
      * @brief Execute the action
      * @return Status of the action execution
      */
-    BehaviorStatus tick() override {
+    BehaviorStatus tick() override
+    {
         return action();
     }
-    
+
     /**
      * @brief Reset the node's state
      */
-    void reset() override {
+    void reset() override
+    {
         // Most action nodes are stateless, so nothing to reset
     }
-    
+
 private:
     std::function<BehaviorStatus()> action;
 };
@@ -173,6 +204,7 @@ public:
 private:
     std::vector<std::shared_ptr<BehaviorNode>> children;
     size_t currentChild = 0;
+    bool isRunning = false;
 };
 
 /**
@@ -214,6 +246,7 @@ public:
 private:
     std::vector<std::shared_ptr<BehaviorNode>> children;
     size_t currentChild = 0;
+    bool isRunning = false;
 };
 
 /**

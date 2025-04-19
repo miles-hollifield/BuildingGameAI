@@ -57,48 +57,46 @@ Environment createIndoorEnvironment(int width, int height)
     env.addRoom(sf::FloatRect(30, 30, 580, 420));
 
     // Add walls to define rooms with openings for doorways
+    // Reduced wall thickness from 10 to 5 units
+    // Made doorways wider by shortening walls
 
     // Top horizontal divider with doorway gap
-    env.addObstacle(sf::FloatRect(30, 170, 250, 10));  // Left section
-    env.addObstacle(sf::FloatRect(330, 170, 280, 10)); // Right section
+    env.addObstacle(sf::FloatRect(30, 170, 225, 5));   // Left section (shortened by 25)
+    env.addObstacle(sf::FloatRect(350, 170, 260, 5));  // Right section (moved right by 20)
 
     // Vertical divider with two doorway gaps
-    env.addObstacle(sf::FloatRect(330, 30, 10, 90));   // Top section
-    env.addObstacle(sf::FloatRect(330, 210, 10, 120)); // Middle section
-    env.addObstacle(sf::FloatRect(330, 370, 10, 80));  // Bottom section
+    env.addObstacle(sf::FloatRect(330, 30, 5, 70));    // Top section (shortened by 20)
+    env.addObstacle(sf::FloatRect(330, 230, 5, 80));   // Middle section (moved down, shortened)
+    env.addObstacle(sf::FloatRect(330, 390, 5, 60));   // Bottom section (moved down, shortened)
 
     // Left vertical divider with doorway
-    env.addObstacle(sf::FloatRect(170, 170, 10, 120)); // Upper section
-    env.addObstacle(sf::FloatRect(170, 330, 10, 120)); // Lower section
+    env.addObstacle(sf::FloatRect(170, 170, 5, 90));   // Upper section (shortened by 30)
+    env.addObstacle(sf::FloatRect(170, 350, 5, 100));  // Lower section (moved down, shortened)
 
     // Right vertical divider with doorway
-    env.addObstacle(sf::FloatRect(490, 170, 10, 120)); // Upper section
-    env.addObstacle(sf::FloatRect(490, 330, 10, 120)); // Lower section
+    env.addObstacle(sf::FloatRect(490, 170, 5, 90));   // Upper section (shortened by 30)
+    env.addObstacle(sf::FloatRect(490, 350, 5, 100));  // Lower section (moved down, shortened)
 
     // Bottom horizontal divider with doorway gaps
-    env.addObstacle(sf::FloatRect(30, 330, 90, 10));  // Left section
-    env.addObstacle(sf::FloatRect(210, 330, 80, 10)); // Middle-left section
-    env.addObstacle(sf::FloatRect(370, 330, 80, 10)); // Middle-right section
-    env.addObstacle(sf::FloatRect(530, 330, 80, 10)); // Right section
+    env.addObstacle(sf::FloatRect(30, 330, 70, 5));    // Left section (shortened by 20)
+    // Removed middle sections as you did
+    env.addObstacle(sf::FloatRect(540, 330, 70, 5));   // Right section (moved right, shortened)
 
-    // Add obstacles within rooms
-
+    // Add obstacles within rooms - made smaller
+    
     // Top-right room obstacles
-    env.addObstacle(sf::FloatRect(410, 80, 30, 40));
+    env.addObstacle(sf::FloatRect(410, 80, 20, 30));  // Reduced from 30x40
 
     // Middle-left room obstacles
-    env.addObstacle(sf::FloatRect(80, 240, 40, 30));
+    env.addObstacle(sf::FloatRect(80, 240, 30, 20));  // Reduced from 40x30
 
     // Middle-center room obstacles
-    env.addObstacle(sf::FloatRect(260, 240, 30, 50));
-
-    // Middle-right room obstacles
-    env.addObstacle(sf::FloatRect(400, 240, 50, 40));
+    env.addObstacle(sf::FloatRect(260, 240, 20, 35)); // Reduced from 30x50
 
     // Bottom row room obstacles
-    env.addObstacle(sf::FloatRect(120, 380, 30, 30));
-    env.addObstacle(sf::FloatRect(270, 380, 25, 35));
-    env.addObstacle(sf::FloatRect(530, 380, 40, 25));
+    env.addObstacle(sf::FloatRect(120, 380, 20, 20)); // Reduced from 30x30
+    env.addObstacle(sf::FloatRect(270, 380, 20, 25)); // Reduced from 25x35
+    env.addObstacle(sf::FloatRect(530, 380, 30, 20)); // Reduced from 40x25
 
     return env;
 }
@@ -543,14 +541,40 @@ std::shared_ptr<BehaviorTree> createMonsterBehaviorTree(Monster &monster)
         },
         "Wander");
 
-    auto danceAction = std::make_shared<BehaviorActionNode>(
-        [&monster]()
+    auto sharedDanceState = std::make_shared<BehaviorState>();
+
+    auto cardinalDanceAction = std::make_shared<BehaviorActionNode>(
+        [&monster, state = sharedDanceState]() mutable
         {
-            monster.executeAction("Dance", monster.getDeltaTime());
+            // If we're not initialized, start the dance
+            if (!state->initialized)
+            {
+                std::cout << "DANCE: Initializing dance action" << std::endl;
+                state->initialized = true;
+                state->timer = 0.0f;
+                monster.executeAction("Dance", monster.getDeltaTime());
+                return BehaviorStatus::RUNNING;
+            }
+
+            // Update the dance timer with the correct delta time
+            state->timer += monster.getDeltaTime();
+
+            // Continue dance while in progress
+            if (state->timer < 2.0f)
+            {
+                std::cout << "DANCE: Dancing in progress, timer = " << state->timer << std::endl;
+                monster.executeAction("Dance", monster.getDeltaTime());
+                return BehaviorStatus::RUNNING;
+            }
+
+            // Dance is complete - print completion message
+            std::cout << "DANCE: Dance completed, returning SUCCESS" << std::endl;
+            state->initialized = false;
+            state->timer = 0.0f;
             return BehaviorStatus::SUCCESS;
         },
-        "Dance");
-        
+        "CardinalDance");
+
     auto fleeAction = std::make_shared<BehaviorActionNode>(
         [&monster]()
         {
@@ -559,120 +583,160 @@ std::shared_ptr<BehaviorTree> createMonsterBehaviorTree(Monster &monster)
         },
         "Flee");
 
-    auto idleAction = std::make_shared<BehaviorActionNode>(
-        [&monster]()
-        {
-            monster.executeAction("Idle", monster.getDeltaTime());
-            return BehaviorStatus::SUCCESS;
-        },
-        "Idle");
-
     // Create conditions
-    auto isNearPlayerCondition = std::make_shared<ConditionNode>(
-        [&monster]() -> bool
-        {
-            // Check if monster is close to player
-            const float NEAR_DISTANCE = 150.0f;
-            return monster.hasCaughtPlayer() ||
-                   std::sqrt(std::pow(monster.getPosition().x - monster.getPlayerKinematic().position.x, 2) +
-                             std::pow(monster.getPosition().y - monster.getPlayerKinematic().position.y, 2)) < NEAR_DISTANCE;
-        },
-        "IsNearPlayer");
-
     auto canSeePlayerCondition = std::make_shared<ConditionNode>(
         [&monster]() -> bool
         {
-            // Check if player is in a 45-degree cone in front of monster
-            sf::Vector2f toPlayer = monster.getPlayerKinematic().position - monster.getKinematic().position;
+            // Get direction to player
+            sf::Vector2f monsterPos = monster.getPosition();
+            sf::Vector2f playerPos = monster.getPlayerKinematic().position;
+            sf::Vector2f toPlayer = playerPos - monsterPos;
+
+            // Calculate distance
             float distance = std::sqrt(toPlayer.x * toPlayer.x + toPlayer.y * toPlayer.y);
 
-            if (distance < 1.0f)
-                return true; // Player is at same position
+            // Can always "see" if extremely close
+            if (distance < 20.0f)
+                return true;
 
-            // Normalize
-            toPlayer /= distance;
+            // If too far away, can't see
+            if (distance > 200.0f)
+                return false;
 
-            // Get forward vector of monster
-            float radians = monster.getKinematic().orientation * 3.14159f / 180.0f;
-            sf::Vector2f forward(std::cos(radians), std::sin(radians));
+            // Check if player is within view cone (120 degrees)
+            float monsterAngle = monster.getKinematic().orientation * 3.14159f / 180.0f;
+            sf::Vector2f monsterDir(std::cos(monsterAngle), std::sin(monsterAngle));
 
-            // Dot product to find cos of angle between vectors
-            float dot = forward.x * toPlayer.x + forward.y * toPlayer.y;
+            // Normalize to player direction
+            toPlayer = toPlayer / distance;
 
-            // If dot > cos(45°), player is within 45° cone in front of monster
-            return dot > 0.7071f; // cos(45°) = 0.7071
+            // Dot product gives cosine of angle between vectors
+            float dot = monsterDir.x * toPlayer.x + monsterDir.y * toPlayer.y;
+
+            // Check if within 60° (cos(60°) ≈ 0.5)
+            bool withinViewCone = (dot > 0.5f);
+
+            // Check line of sight
+            bool lineOfSight = monster.hasLineOfSightTo(playerPos);
+
+            return withinViewCone && lineOfSight;
         },
         "CanSeePlayer");
 
     auto isNearObstacleCondition = std::make_shared<ConditionNode>(
-        [&monster]() -> bool {
-            // This would normally check for nearby obstacles
-            // Simplified version - random chance (30%)
-            return (rand() % 100) < 30;
+        [&monster, detectionCount = std::make_shared<int>(0)]() -> bool
+        {
+            // Check for nearby obstacles using raycasting
+            sf::Vector2f position = monster.getPosition();
+            const Environment &env = monster.getEnvironment();
+
+            // Check primarily in the direction of movement
+            sf::Vector2f velocity = monster.getKinematic().velocity;
+            float speed = std::sqrt(velocity.x * velocity.x + velocity.y * velocity.y);
+
+            // If not moving, no need to flee
+            if (speed < 5.0f)
+            {
+                *detectionCount = 0;
+                return false;
+            }
+
+            // Normalize velocity to get direction
+            sf::Vector2f moveDir = velocity / speed;
+
+            // Check for obstacles directly ahead at MUCH closer distances
+            for (float dist = 5.0f; dist <= 20.0f; dist += 5.0f)
+            {
+                sf::Vector2f checkPoint = position + moveDir * dist;
+                if (env.isObstacle(checkPoint))
+                {
+                    std::cout << "OBSTACLE: Detected obstacle directly ahead at distance " << dist << std::endl;
+                    (*detectionCount)++;
+                    // Only flee if we've detected obstacles multiple times in a row
+                    return *detectionCount >= 2;
+                }
+            }
+
+            // Check in a 45-degree cone around movement direction at closer distances
+            for (int angleOffset = -45; angleOffset <= 45; angleOffset += 15)
+            {
+                if (angleOffset == 0)
+                    continue; // Already checked straight ahead
+
+                float radians = std::atan2(moveDir.y, moveDir.x) + (angleOffset * 3.14159f / 180.0f);
+                sf::Vector2f rayDir(std::cos(radians), std::sin(radians));
+
+                for (float dist = 5.0f; dist <= 15.0f; dist += 5.0f)
+                {
+                    sf::Vector2f checkPoint = position + rayDir * dist;
+                    if (env.isObstacle(checkPoint))
+                    {
+                        std::cout << "OBSTACLE: Detected obstacle at angle " << angleOffset
+                                  << " at distance " << dist << std::endl;
+                        (*detectionCount)++;
+                        // Only flee if we've detected obstacles multiple times in a row
+                        return *detectionCount >= 2;
+                    }
+                }
+            }
+
+            // No obstacles detected
+            *detectionCount = 0;
+            return false;
         },
         "IsNearObstacle");
 
-    auto hasDancedRecentlyCondition = std::make_shared<ConditionNode>(
-        [&monster]() -> bool
-        {
-            // This condition would normally check a timer
-            // For simplicity, we'll use a random chance (10%)
-            return (rand() % 100) < 10;
-        },
-        "HasDancedRecently");
-
     auto shouldDanceCondition = std::make_shared<ConditionNode>(
-        [&monster]() -> bool
+        [&monster, lastDanceTime = std::make_shared<float>(0.0f),
+         cooldownTime = std::make_shared<float>(10.0f)]() mutable -> bool
         {
-            // Random chance to dance (5%)
-            return (rand() % 100) < 5;
+            // Add elapsed time to the cooldown timer
+            *lastDanceTime += monster.getDeltaTime();
+
+            // Only allow dancing after cooldown period (10 seconds)
+            if (*lastDanceTime >= *cooldownTime)
+            {
+                // Random chance to dance (5%)
+                bool shouldDance = (rand() % 100) < 5;
+
+                if (shouldDance)
+                {
+                    std::cout << "DANCE CONDITION: Cooldown complete, triggering dance" << std::endl;
+                    // Reset cooldown timer if we decide to dance
+                    *lastDanceTime = 0.0f;
+                    return true;
+                }
+            }
+
+            return false;
         },
         "ShouldDance");
-        
-    auto isMovingFastCondition = std::make_shared<ConditionNode>(
-        [&monster]() -> bool
-        {
-            // Check if monster is moving fast
-            float speed = std::sqrt(
-                monster.getKinematic().velocity.x * monster.getKinematic().velocity.x +
-                monster.getKinematic().velocity.y * monster.getKinematic().velocity.y);
-            return speed > 100.0f;
-        },
-        "IsMovingFast");
 
-    // Now the composite nodes that use these conditions
-
-    // Flee sequence: If near obstacle and moving fast, flee
-    auto fleeSequence = std::make_shared<SequenceNode>("Flee Sequence");
-    fleeSequence->addChild(isNearObstacleCondition);
-    fleeSequence->addChild(isMovingFastCondition);
-    fleeSequence->addChild(fleeAction);
-
-    // Chase sequence: If we can see the player, pathfind to them
+    // Create chase sequence
     auto chaseSequence = std::make_shared<SequenceNode>("Chase Sequence");
     chaseSequence->addChild(canSeePlayerCondition);
     chaseSequence->addChild(pathfindToPlayerAction);
 
-    // Dance sequence: If we should dance and haven't recently, do a dance
+    // Create dance sequence
     auto danceSequence = std::make_shared<SequenceNode>("Dance Sequence");
     danceSequence->addChild(shouldDanceCondition);
-    danceSequence->addChild(std::make_shared<InverterNode>(hasDancedRecentlyCondition));
-    danceSequence->addChild(danceAction);
+    danceSequence->addChild(cardinalDanceAction);
 
-    // Wander fallback: If nothing else to do, wander
-    auto wanderFallback = std::make_shared<SelectorNode>("Wander Fallback");
-    wanderFallback->addChild(danceSequence);
-    wanderFallback->addChild(wanderAction);
+    // Create flee sequence
+    auto fleeSequence = std::make_shared<SequenceNode>("Flee Sequence");
+    fleeSequence->addChild(isNearObstacleCondition);
+    fleeSequence->addChild(fleeAction);
 
     // Main selector - prioritize actions
     auto rootSelector = std::make_shared<SelectorNode>("Root Selector");
-    rootSelector->addChild(fleeSequence);
-    rootSelector->addChild(chaseSequence);
-    rootSelector->addChild(wanderFallback);
+    rootSelector->addChild(fleeSequence);  // First priority: flee from obstacles when moving fast
+    rootSelector->addChild(chaseSequence); // Second priority: chase player if visible
+    rootSelector->addChild(danceSequence); // Third priority: occasionally dance
+    rootSelector->addChild(wanderAction);  // Last resort: wander around
 
     // Set the root node
     behaviorTree->setRootNode(rootSelector);
-    
+
     // Log tree creation
     std::cout << "Created behavior tree for monster" << std::endl;
 
@@ -688,11 +752,11 @@ std::shared_ptr<DecisionTree> createCharacterDecisionTree(EnvironmentState &stat
 
     // Create potential target positions adjusted for environment size
     std::vector<sf::Vector2f> potentialTargets = {
-        {100, 100},   // Top-left room
-        {500, 100},   // Top-right room
-        {100, 350},   // Bottom-left room
-        {500, 350},   // Bottom-right room
-        {250, 250}    // Center
+        {100, 100}, // Top-left room
+        {500, 100}, // Top-right room
+        {100, 350}, // Bottom-left room
+        {500, 350}, // Bottom-right room
+        {250, 250}  // Center
     };
 
     // Build a complex decision tree
@@ -762,30 +826,47 @@ std::shared_ptr<DecisionTree> learnDecisionTreeFromBehaviorTree(const std::strin
 
             // Distance to player (discretized)
             float distanceToPlayer = 100.0f; // Placeholder
-            if (state.getDistanceToTarget(state.getPosition()) < 50.0f) {
+            if (state.getDistanceToTarget(state.getPosition()) < 50.0f)
+            {
                 stateVector.push_back("near");
-            } else if (state.getDistanceToTarget(state.getPosition()) < 150.0f) {
+            }
+            else if (state.getDistanceToTarget(state.getPosition()) < 150.0f)
+            {
                 stateVector.push_back("medium");
-            } else {
+            }
+            else
+            {
                 stateVector.push_back("far");
             }
 
             // Relative orientation (discretized)
             // This would use actual orientation in real implementation
             int orientation = rand() % 3;
-            switch (orientation) {
-                case 0: stateVector.push_back("front"); break;
-                case 1: stateVector.push_back("side"); break;
-                case 2: stateVector.push_back("back"); break;
+            switch (orientation)
+            {
+            case 0:
+                stateVector.push_back("front");
+                break;
+            case 1:
+                stateVector.push_back("side");
+                break;
+            case 2:
+                stateVector.push_back("back");
+                break;
             }
 
             // Speed (discretized)
             float speed = state.getSpeed();
-            if (speed < 10.0f) {
+            if (speed < 10.0f)
+            {
                 stateVector.push_back("stopped");
-            } else if (speed < 100.0f) {
+            }
+            else if (speed < 100.0f)
+            {
                 stateVector.push_back("slow");
-            } else {
+            }
+            else
+            {
                 stateVector.push_back("fast");
             }
 
@@ -798,19 +879,33 @@ std::shared_ptr<DecisionTree> learnDecisionTreeFromBehaviorTree(const std::strin
             // Path count (discretized)
             // This would use actual path data in real implementation
             int pathType = rand() % 4;
-            switch (pathType) {
-                case 0: stateVector.push_back("none"); break;
-                case 1: stateVector.push_back("few"); break;
-                case 2: stateVector.push_back("medium"); break;
-                case 3: stateVector.push_back("many"); break;
+            switch (pathType)
+            {
+            case 0:
+                stateVector.push_back("none");
+                break;
+            case 1:
+                stateVector.push_back("few");
+                break;
+            case 2:
+                stateVector.push_back("medium");
+                break;
+            case 3:
+                stateVector.push_back("many");
+                break;
             }
 
             // Time in state (discretized)
-            if (state.hasBeenInCurrentState(1.0f)) {
+            if (state.hasBeenInCurrentState(1.0f))
+            {
                 stateVector.push_back("short");
-            } else if (state.hasBeenInCurrentState(3.0f)) {
+            }
+            else if (state.hasBeenInCurrentState(3.0f))
+            {
                 stateVector.push_back("medium");
-            } else {
+            }
+            else
+            {
                 stateVector.push_back("long");
             }
 

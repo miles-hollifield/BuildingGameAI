@@ -108,13 +108,16 @@ public:
     const Kinematic &getKinematic() const;
 
     /**
+     * @brief Get the environment reference
+     * @return Reference to the environment
+     */
+    const Environment &getEnvironment() const { return environment; }
+
+    /**
      * @brief Get the player's kinematic data
      * @return Const reference to the player's kinematic data
      */
-    const Kinematic &getPlayerKinematic() const
-    {
-        return *playerKinematic;
-    }
+    const Kinematic &getPlayerKinematic() const { return *playerKinematic; }
 
     /**
      * @brief Execute a specific action
@@ -130,16 +133,34 @@ public:
     bool hasCaughtPlayer() const;
 
     /**
+     * @brief Check if the monster has line of sight to a target
+     * @param target Target position to check
+     * @return True if there's a clear line of sight
+     */
+    bool hasLineOfSightTo(const sf::Vector2f &target) const;
+
+    /**
      * @brief Record the current state and action to a file
      * @param outputFile Output stream to write to
      */
     void recordStateAction(std::ofstream &outputFile);
-    
+
     /**
      * @brief Set and get the current delta time (for behavior tree actions)
      */
     void setDeltaTime(float deltaTime) { currentDeltaTime = deltaTime; }
     float getDeltaTime() const { return currentDeltaTime; }
+
+    /**
+     * @brief Set the monster's orientation
+     * @param orientation New orientation in degrees
+     */
+    void setOrientation(float orientation) { monsterKinematic.orientation = orientation; }
+
+    /**
+     * @brief Get whether the monster is currently dancing
+     */
+    bool getIsDancing() const { return isDancing; }
 
 private:
     // Entity data
@@ -177,6 +198,7 @@ private:
     std::vector<sf::Vector2f> dancePath;
     bool isDancing;
     float danceTimer;
+    int dancePhase;
 
     // Helper methods
     void pathfindToPlayer();

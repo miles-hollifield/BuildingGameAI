@@ -9,6 +9,106 @@
 #include "headers/BehaviorTree.h"
 #include <iostream>
 
+// SequenceNode implementation
+BehaviorStatus SequenceNode::tick()
+{
+    // If not running, start from the beginning
+    if (!isRunning)
+    {
+        currentChild = 0;
+    }
+
+    // Continue from where we left off
+    while (currentChild < children.size())
+    {
+        BehaviorStatus status = children[currentChild]->tick();
+
+        if (status == BehaviorStatus::RUNNING)
+        {
+            isRunning = true;
+            return BehaviorStatus::RUNNING;
+        }
+        else if (status == BehaviorStatus::FAILURE)
+        {
+            // Child failed, entire sequence fails
+            isRunning = false;
+            return BehaviorStatus::FAILURE;
+        }
+
+        // Child succeeded, move to next child
+        currentChild++;
+    }
+
+    // All children succeeded
+    isRunning = false;
+    return BehaviorStatus::SUCCESS;
+}
+
+void SequenceNode::reset()
+{
+    currentChild = 0;
+    isRunning = false;
+    for (auto &child : children)
+    {
+        child->reset();
+    }
+}
+
+// SelectorNode implementation
+BehaviorStatus SelectorNode::tick()
+{
+    std::cout << "SELECTOR [" << nodeName << "]: Starting tick, currentChild = " 
+              << currentChild << ", isRunning = " << (isRunning ? "true" : "false") << std::endl;
+              
+    // If not running, start from the beginning
+    if (!isRunning) {
+        currentChild = 0;
+    }
+    
+    // Continue from where we left off
+    while (currentChild < children.size())
+    {
+        std::cout << "SELECTOR [" << nodeName << "]: Trying child " << currentChild 
+                  << " (" << children[currentChild]->getName() << ")" << std::endl;
+                  
+        BehaviorStatus status = children[currentChild]->tick();
+        
+        std::cout << "SELECTOR [" << nodeName << "]: Child " << currentChild 
+                  << " returned status " << (status == BehaviorStatus::SUCCESS ? "SUCCESS" : 
+                  (status == BehaviorStatus::FAILURE ? "FAILURE" : "RUNNING")) << std::endl;
+
+        if (status == BehaviorStatus::RUNNING)
+        {
+            isRunning = true;
+            return BehaviorStatus::RUNNING;
+        }
+        else if (status == BehaviorStatus::SUCCESS)
+        {
+            // Child succeeded, entire selector succeeds
+            isRunning = false;
+            return BehaviorStatus::SUCCESS;
+        }
+
+        // Child failed, try the next one
+        currentChild++;
+    }
+
+    // All children failed
+    std::cout << "SELECTOR [" << nodeName << "]: All children failed" << std::endl;
+    isRunning = false;
+    return BehaviorStatus::FAILURE;
+}
+
+void SelectorNode::reset()
+{
+    currentChild = 0;
+    isRunning = false;
+    for (auto &child : children)
+    {
+        child->reset();
+    }
+}
+
 // InverterNode implementation
 BehaviorStatus InverterNode::tick()
 {
@@ -71,70 +171,6 @@ void RepeatNode::reset()
     child->reset();
 }
 
-// SequenceNode implementation
-BehaviorStatus SequenceNode::tick()
-{
-    // Continue from where we left off
-    while (currentChild < children.size())
-    {
-        BehaviorStatus status = children[currentChild]->tick();
-
-        // If the child is still running or failed, return that status
-        if (status != BehaviorStatus::SUCCESS)
-        {
-            return status;
-        }
-
-        // Child succeeded, move to next child
-        currentChild++;
-    }
-
-    // All children succeeded
-    currentChild = 0; // Reset for next time
-    return BehaviorStatus::SUCCESS;
-}
-
-void SequenceNode::reset()
-{
-    currentChild = 0;
-    for (auto &child : children)
-    {
-        child->reset();
-    }
-}
-
-// SelectorNode implementation
-BehaviorStatus SelectorNode::tick()
-{
-    // Continue from where we left off
-    while (currentChild < children.size())
-    {
-        BehaviorStatus status = children[currentChild]->tick();
-
-        // If the child is still running or succeeded, return that status
-        if (status != BehaviorStatus::FAILURE)
-        {
-            return status;
-        }
-
-        // Child failed, try the next one
-        currentChild++;
-    }
-
-    // All children failed
-    currentChild = 0; // Reset for next time
-    return BehaviorStatus::FAILURE;
-}
-
-void SelectorNode::reset()
-{
-    currentChild = 0;
-    for (auto &child : children)
-    {
-        child->reset();
-    }
-}
-
 // RandomSelectorNode implementation
 BehaviorStatus RandomSelectorNode::tick()
 {
@@ -189,10 +225,23 @@ BehaviorStatus ParallelNode::tick()
     // Check if we've met the success or failure policy
     if (successPolicy > 0 && successCount >= successPolicy)
     {
+        // Reset all children for next time
+        for (size_t i = 0; i < children.size(); i++)
+        {
+            children[i]->reset();
+            childStatuses[i] = BehaviorStatus::RUNNING;
+        }
         return BehaviorStatus::SUCCESS;
     }
+
     if (failurePolicy > 0 && failureCount >= failurePolicy)
     {
+        // Reset all children for next time
+        for (size_t i = 0; i < children.size(); i++)
+        {
+            children[i]->reset();
+            childStatuses[i] = BehaviorStatus::RUNNING;
+        }
         return BehaviorStatus::FAILURE;
     }
 

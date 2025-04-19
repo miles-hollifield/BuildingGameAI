@@ -122,10 +122,14 @@ bool Monster::update(float deltaTime)
             // Tick the behavior tree
             BehaviorStatus status = behaviorTree->tick();
 
+            // Note: The behavior tree actions already call executeAction()
+            // No need to call executeAction() again for this control type
+
             // If no action was set by the behavior tree, default to idle
             if (currentAction.empty())
             {
                 currentAction = "Idle";
+                executeAction(currentAction, deltaTime); // Only execute if setting to idle
             }
         }
     }
@@ -138,9 +142,6 @@ bool Monster::update(float deltaTime)
             executeAction(action, deltaTime);
         }
     }
-
-    // Execute the current action
-    executeAction(currentAction, deltaTime);
 
     // Drop breadcrumb and update sprite
     dropBreadcrumb();
@@ -482,109 +483,196 @@ void Monster::followPath(float deltaTime)
     }
 }
 
-void Monster::doDance(float deltaTime) {
+void Monster::doDance(float deltaTime)
+{
     // Initialize dance if needed
-    if (!isDancing) {
+    if (!isDancing)
+    {
+        std::cout << "MONSTER: Starting dance" << std::endl;
         isDancing = true;
         danceTimer = 0;
-        
-        // Set target rotation speed (degrees per second)
-        static const float ROTATION_SPEED = 360.0f; // One full rotation per second
-        monsterKinematic.rotation = ROTATION_SPEED;
-        
+        dancePhase = 0;
+
         // Stop movement during dance
         monsterKinematic.velocity = {0, 0};
+
+        // Initial orientation - North (270 degrees)
+        monsterKinematic.orientation = 270.0f;
     }
-    
+
     // Update dance timer
     danceTimer += deltaTime;
-    
-    // Rotate in place
-    monsterKinematic.orientation += monsterKinematic.rotation * deltaTime;
-    
-    // Keep orientation in range [0, 360)
-    while (monsterKinematic.orientation >= 360.0f) {
-        monsterKinematic.orientation -= 360.0f;
+
+    // Cardinal directions dance:
+    // Phase 0 (0-0.5s): North (270°)
+    // Phase 1 (0.5-1.0s): East (0°)
+    // Phase 2 (1.0-1.5s): South (90°)
+    // Phase 3 (1.5-2.0s): West (180°)
+
+    const float PHASE_DURATION = 0.5f;
+    float phaseTimes[4] = {0.0f, 0.5f, 1.0f, 1.5f};
+    float orientations[4] = {270.0f, 0.0f, 90.0f, 180.0f};
+
+    // Set the current phase based on timer
+    for (int i = 0; i < 4; i++)
+    {
+        if (danceTimer >= phaseTimes[i] &&
+            (i == 3 || danceTimer < phaseTimes[i + 1]))
+        {
+            if (dancePhase != i)
+            {
+                std::cout << "MONSTER: Dance phase " << i << ", orientation = " << orientations[i] << std::endl;
+                dancePhase = i;
+            }
+            // Set orientation based on current phase
+            monsterKinematic.orientation = orientations[dancePhase];
+            break;
+        }
     }
-    
-    // End dance after two rotations (2 seconds at 360 degrees/second)
-    if (danceTimer > 2.0f) {
+
+    // End dance after all 4 directions (2 seconds total)
+    if (danceTimer >= 2.0f)
+    {
+        std::cout << "MONSTER: Dance completed, time = " << danceTimer << std::endl;
         isDancing = false;
-        monsterKinematic.rotation = 0;
+
+        // Resume movement with a small random velocity
+        float randomAngle = (rand() % 360) * 3.14159f / 180.0f;
+        monsterKinematic.velocity = sf::Vector2f(std::cos(randomAngle), std::sin(randomAngle)) * 20.0f;
     }
+}
+
+bool Monster::hasLineOfSightTo(const sf::Vector2f &target) const
+{
+    return environment.hasLineOfSight(monsterKinematic.position, target);
 }
 
 void Monster::flee(float deltaTime)
 {
+    std::cout << "FLEE: Starting flee behavior" << std::endl;
+
     sf::Vector2f fleeDirection = {0, 0};
     float nearestObstacleDistance = 1000.0f;
 
-    // Check in 8 directions to find nearest obstacle
+    // Current movement direction
+    sf::Vector2f moveDir(0, 0);
+    float speed = std::sqrt(monsterKinematic.velocity.x * monsterKinematic.velocity.x +
+                            monsterKinematic.velocity.y * monsterKinematic.velocity.y);
+    if (speed > 0.1f)
+    {
+        moveDir = monsterKinematic.velocity / speed;
+    }
+
+    // Check in 8 directions to find obstacles
+    std::vector<int> obstacleDirections;
     for (int angle = 0; angle < 360; angle += 45)
     {
         float radian = angle * 3.14159f / 180.0f;
         float dx = std::cos(radian);
         float dy = std::sin(radian);
+        sf::Vector2f rayDir(dx, dy);
 
-        // Check points along this direction
-        for (float dist = 10.0f; dist <= 100.0f; dist += 10.0f)
+        // Check points along this direction at closer distances
+        for (float dist = 5.0f; dist <= 30.0f; dist += 5.0f)
         {
             sf::Vector2f checkPoint(monsterKinematic.position.x + dx * dist,
                                     monsterKinematic.position.y + dy * dist);
 
             if (environment.isObstacle(checkPoint))
             {
+                // Mark this direction as having an obstacle
+                obstacleDirections.push_back(angle);
+
                 if (dist < nearestObstacleDistance)
                 {
                     nearestObstacleDistance = dist;
-                    // Flee in opposite direction
-                    fleeDirection = sf::Vector2f(-dx, -dy);
+                    std::cout << "FLEE: Found obstacle at distance " << dist
+                              << " in direction " << angle << " degrees" << std::endl;
                 }
                 break;
             }
         }
     }
 
-    // If no obstacles found, flee away from last known position
-    if (fleeDirection.x == 0 && fleeDirection.y == 0)
+    // Determine best flee direction based on obstacle locations
+    if (!obstacleDirections.empty())
     {
-        fleeDirection = monsterKinematic.position - sf::Vector2f(monsterKinematic.position.x + monsterKinematic.velocity.x,
-                                                                 monsterKinematic.position.y + monsterKinematic.velocity.y);
+        // Calculate the average obstacle direction
+        float avgX = 0, avgY = 0;
+        for (int angle : obstacleDirections)
+        {
+            float radian = angle * 3.14159f / 180.0f;
+            avgX += std::cos(radian);
+            avgY += std::sin(radian);
+        }
+        avgX /= obstacleDirections.size();
+        avgY /= obstacleDirections.size();
 
+        // Flee in opposite direction of average obstacle
+        fleeDirection = sf::Vector2f(-avgX, -avgY);
         float length = std::sqrt(fleeDirection.x * fleeDirection.x + fleeDirection.y * fleeDirection.y);
         if (length > 0)
         {
             fleeDirection /= length;
         }
-        else
-        {
-            // Random direction
-            float angle = (rand() % 360) * 3.14159f / 180.0f;
-            fleeDirection = sf::Vector2f(std::cos(angle), std::sin(angle));
-        }
+
+        std::cout << "FLEE: Fleeing in opposite direction of average obstacle: "
+                  << fleeDirection.x << "," << fleeDirection.y << std::endl;
+    }
+    else
+    {
+        // If no obstacles detected, flee in a random direction
+        float angle = (rand() % 360) * 3.14159f / 180.0f;
+        fleeDirection = sf::Vector2f(std::cos(angle), std::sin(angle));
+        std::cout << "FLEE: No obstacles found, using random flee direction" << std::endl;
     }
 
     // Set velocity to flee
-    float fleeSpeed = 200.0f;
+    float fleeSpeed = 150.0f;
     monsterKinematic.velocity = fleeDirection * fleeSpeed;
 
     // Update orientation to match flee direction
     monsterKinematic.orientation = std::atan2(fleeDirection.y, fleeDirection.x) * 180.0f / 3.14159f;
 
-    // Check for collision
+    // Check if the flee direction is safe
     sf::Vector2f proposedPosition = monsterKinematic.position + monsterKinematic.velocity * deltaTime;
+    if (checkCollision(proposedPosition))
+    {
+        // Try several different angles if the original flee direction is blocked
+        std::cout << "FLEE: Initial flee direction blocked, trying alternatives" << std::endl;
+        bool foundSafePath = false;
 
-    if (!checkCollision(proposedPosition))
-    {
-        // Safe to move
-        monsterKinematic.update(deltaTime);
+        for (int angleOffset = 30; angleOffset < 360 && !foundSafePath; angleOffset += 30)
+        {
+            // Try clockwise and counterclockwise offsets
+            for (int sign : {1, -1})
+            {
+                float radian = std::atan2(fleeDirection.y, fleeDirection.x) + sign * angleOffset * 3.14159f / 180.0f;
+                sf::Vector2f newDir(std::cos(radian), std::sin(radian));
+
+                sf::Vector2f testPosition = monsterKinematic.position + newDir * fleeSpeed * deltaTime;
+                if (!checkCollision(testPosition))
+                {
+                    fleeDirection = newDir;
+                    monsterKinematic.velocity = fleeDirection * fleeSpeed;
+                    monsterKinematic.orientation = radian * 180.0f / 3.14159f;
+                    foundSafePath = true;
+                    std::cout << "FLEE: Found safe path at angle offset " << (sign * angleOffset) << std::endl;
+                    break;
+                }
+            }
+        }
+
+        if (!foundSafePath)
+        {
+            // If all directions are blocked, move slower
+            std::cout << "FLEE: All directions blocked, reducing speed" << std::endl;
+            monsterKinematic.velocity *= 0.5f;
+        }
     }
-    else
-    {
-        // Try to find a valid movement direction
-        sf::Vector2f validPosition = findValidMovement(monsterKinematic.position, proposedPosition);
-        monsterKinematic.position = validPosition;
-    }
+
+    // Apply movement
+    monsterKinematic.update(deltaTime);
 }
 
 bool Monster::checkCollision(sf::Vector2f proposedPosition) const
