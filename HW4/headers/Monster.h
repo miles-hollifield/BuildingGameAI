@@ -134,6 +134,12 @@ public:
      * @param outputFile Output stream to write to
      */
     void recordStateAction(std::ofstream &outputFile);
+    
+    /**
+     * @brief Set and get the current delta time (for behavior tree actions)
+     */
+    void setDeltaTime(float deltaTime) { currentDeltaTime = deltaTime; }
+    float getDeltaTime() const { return currentDeltaTime; }
 
 private:
     // Entity data
@@ -160,6 +166,7 @@ private:
     ControlType controlType;
     std::shared_ptr<BehaviorTree> behaviorTree;
     std::shared_ptr<DecisionTree> decisionTree;
+    float currentDeltaTime;
 
     // State tracking
     std::string currentAction;
@@ -177,6 +184,11 @@ private:
     void followPath(float deltaTime);
     void doDance(float deltaTime);
     void updateSprite();
+    void flee(float deltaTime);
+
+    // Collision handling
+    bool checkCollision(sf::Vector2f proposedPosition) const;
+    sf::Vector2f findValidMovement(sf::Vector2f currentPos, sf::Vector2f proposedPos) const;
 
     // Breadcrumb trail for visualization
     std::deque<sf::CircleShape> breadcrumbs;

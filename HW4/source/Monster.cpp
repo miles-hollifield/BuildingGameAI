@@ -22,6 +22,7 @@ Monster::Monster(sf::Vector2f startPosition, sf::Texture &texture, Environment &
       playerKinematic(nullptr),
       currentWaypointIndex(0),
       controlType(ControlType::BEHAVIOR_TREE),
+      currentDeltaTime(0.0f),
       timeInCurrentAction(0),
       catchDistance(30.0f),
       isDancing(false),
@@ -36,7 +37,7 @@ Monster::Monster(sf::Vector2f startPosition, sf::Texture &texture, Environment &
     sprite.setScale(0.05f, 0.05f); // Reduced scale to match player size
     sprite.setOrigin(texture.getSize().x / 2.0f, texture.getSize().y / 2.0f);
     sprite.setPosition(startPosition);
-    
+
     // Set the sprite color to distinguish it from the player
     sprite.setColor(color);
 
@@ -107,6 +108,9 @@ bool Monster::update(float deltaTime)
     // Update time in current action
     timeInCurrentAction += deltaTime;
 
+    // Store the current deltaTime for use by behavior tree actions
+    setDeltaTime(deltaTime);
+
     // Check if monster has caught player
     bool caughtPlayer = hasCaughtPlayer();
 
@@ -118,8 +122,11 @@ bool Monster::update(float deltaTime)
             // Tick the behavior tree
             BehaviorStatus status = behaviorTree->tick();
 
-            // Note: The behavior tree actions should directly call monster methods
-            // The monster's current action is set by those methods
+            // If no action was set by the behavior tree, default to idle
+            if (currentAction.empty())
+            {
+                currentAction = "Idle";
+            }
         }
     }
     else if (controlType == ControlType::DECISION_TREE)
@@ -132,18 +139,15 @@ bool Monster::update(float deltaTime)
         }
     }
 
-    // Drop a breadcrumb for visualization
-    breadcrumbCounter++;
-    if (breadcrumbCounter >= BREADCRUMB_INTERVAL)
-    {
-        breadcrumbCounter = 0;
-        dropBreadcrumb();
-    }
+    // Execute the current action
+    executeAction(currentAction, deltaTime);
 
-    // Update sprite
+    // Drop breadcrumb and update sprite
+    dropBreadcrumb();
     updateSprite();
 
-    return caughtPlayer;
+    // Return whether we've caught the player
+    return hasCaughtPlayer();
 }
 
 void Monster::draw(sf::RenderWindow &window)
@@ -217,10 +221,28 @@ void Monster::recordStateAction(std::ofstream &outputFile)
         monsterKinematic.velocity.y * monsterKinematic.velocity.y);
 
     // Determine if player is in line of sight
-    bool canSeePlayer = true; // Simplified - would use environment.hasLineOfSight() in full implementation
+    bool canSeePlayer = environment.hasLineOfSight(monsterKinematic.position, playerKinematic->position);
 
     // Determine if obstacles are nearby
-    bool isNearObstacle = false; // Simplified - would check environment in full implementation
+    bool isNearObstacle = false;
+    const float CHECK_DISTANCE = 50.0f;
+
+    // Check in 8 directions (N, NE, E, SE, S, SW, W, NW)
+    for (int angle = 0; angle < 360; angle += 45)
+    {
+        float radian = angle * 3.14159f / 180.0f;
+        float dx = std::cos(radian);
+        float dy = std::sin(radian);
+
+        sf::Vector2f checkPoint(monsterKinematic.position.x + dx * CHECK_DISTANCE,
+                                monsterKinematic.position.y + dy * CHECK_DISTANCE);
+
+        if (environment.isObstacle(checkPoint))
+        {
+            isNearObstacle = true;
+            break;
+        }
+    }
 
     // Count how many paths have been generated
     int pathCount = currentPath.size();
@@ -263,6 +285,10 @@ void Monster::executeAction(const std::string &action, float deltaTime)
     {
         doDance(deltaTime);
     }
+    else if (action == "Flee")
+    {
+        flee(deltaTime);
+    }
     else if (action == "Idle")
     {
         // Do nothing
@@ -303,63 +329,94 @@ void Monster::pathfindToPlayer()
 
 void Monster::wander(float deltaTime)
 {
-    // Simple wander behavior - add a random steering force
-    float wanderRadius = 100.0f;
-    float wanderDistance = 50.0f;
-    float wanderJitter = 10.0f;
+    // Calculate wander circle center ahead of the monster
+    float wanderCircleDistance = 50.0f;
+    float wanderCircleRadius = 30.0f;
 
-    // Maintain a static random target position on the wander circle
-    static sf::Vector2f wanderTarget = {0, 0};
-
-    // Jitter the target
-    wanderTarget.x += (rand() % (int)(wanderJitter * 2) - wanderJitter) * deltaTime;
-    wanderTarget.y += (rand() % (int)(wanderJitter * 2) - wanderJitter) * deltaTime;
-
-    // Normalize the target
-    float length = std::sqrt(wanderTarget.x * wanderTarget.x + wanderTarget.y * wanderTarget.y);
-    if (length > 0)
-    {
-        wanderTarget = wanderTarget * (wanderRadius / length);
-    }
-    else
-    {
-        wanderTarget = {wanderRadius, 0};
-    }
-
-    // Calculate the target position in world space
-    sf::Vector2f targetWorld = monsterKinematic.position;
-
-    // Add velocity direction multiplied by distance
+    // Get normalized velocity direction (or use orientation if velocity is near zero)
+    sf::Vector2f direction;
     if (std::abs(monsterKinematic.velocity.x) + std::abs(monsterKinematic.velocity.y) > 0.1f)
     {
-        sf::Vector2f velNorm = monsterKinematic.velocity;
-        float velLength = std::sqrt(velNorm.x * velNorm.x + velNorm.y * velNorm.y);
-        velNorm = velNorm * (1.0f / velLength);
-        targetWorld += velNorm * wanderDistance;
+        float speed = std::sqrt(monsterKinematic.velocity.x * monsterKinematic.velocity.x +
+                                monsterKinematic.velocity.y * monsterKinematic.velocity.y);
+        direction = monsterKinematic.velocity / speed;
     }
     else
     {
-        // If not moving, use orientation instead
-        float radians = monsterKinematic.orientation * 3.14159f / 180.0f;
-        targetWorld += sf::Vector2f(std::cos(radians), std::sin(radians)) * wanderDistance;
+        float angle = monsterKinematic.orientation * 3.14159f / 180.0f;
+        direction = sf::Vector2f(std::cos(angle), std::sin(angle));
     }
 
-    // Add the target offset
-    targetWorld += wanderTarget;
+    // Calculate wander circle center
+    sf::Vector2f circleCenter = monsterKinematic.position + direction * wanderCircleDistance;
 
-    // Create a temporary target kinematic
-    Kinematic targetKinematic;
-    targetKinematic.position = targetWorld;
+    // Update wander angle with some randomness
+    static float wanderAngle = 0;
+    wanderAngle += ((rand() % 100) / 100.0f - 0.5f) * 30.0f; // Random angle change
 
-    // Calculate steering using arrive behavior
-    SteeringData steering = arriveBehavior.calculateAcceleration(monsterKinematic, targetKinematic);
+    // Calculate displacement force
+    sf::Vector2f displacement(std::cos(wanderAngle * 3.14159f / 180.0f),
+                              std::sin(wanderAngle * 3.14159f / 180.0f));
+    displacement *= wanderCircleRadius;
 
-    // Apply steering
-    monsterKinematic.velocity += steering.linear * deltaTime;
-    monsterKinematic.rotation += steering.angular * deltaTime;
+    // Calculate target and apply steering
+    sf::Vector2f wanderForce = circleCenter + displacement - monsterKinematic.position;
 
-    // Update position
-    monsterKinematic.update(deltaTime);
+    // Normalize and scale force
+    float length = std::sqrt(wanderForce.x * wanderForce.x + wanderForce.y * wanderForce.y);
+    if (length > 0)
+    {
+        wanderForce /= length;
+        wanderForce *= 100.0f; // Scale to desired acceleration
+    }
+
+    // Apply force to velocity
+    monsterKinematic.velocity += wanderForce * deltaTime;
+
+    // Limit speed
+    float currentSpeed = std::sqrt(monsterKinematic.velocity.x * monsterKinematic.velocity.x +
+                                   monsterKinematic.velocity.y * monsterKinematic.velocity.y);
+    if (currentSpeed > 50.0f)
+    {
+        monsterKinematic.velocity *= (50.0f / currentSpeed);
+    }
+
+    // Calculate proposed position with collision check
+    sf::Vector2f proposedPosition = monsterKinematic.position + monsterKinematic.velocity * deltaTime;
+
+    if (!checkCollision(proposedPosition))
+    {
+        // Safe to move
+        monsterKinematic.position = proposedPosition;
+    }
+    else
+    {
+        // Hit obstacle, find valid movement or change direction
+        sf::Vector2f validPosition = findValidMovement(monsterKinematic.position, proposedPosition);
+
+        if (validPosition != monsterKinematic.position)
+        {
+            // Move to valid position
+            monsterKinematic.position = validPosition;
+        }
+        else
+        {
+            // Completely stuck, change direction dramatically
+            float randomAngle = (rand() % 360) * 3.14159f / 180.0f;
+            monsterKinematic.velocity = sf::Vector2f(std::cos(randomAngle), std::sin(randomAngle)) * 50.0f;
+
+            // Reset wander angle to prevent getting stuck in a pattern
+            wanderAngle = randomAngle * 180.0f / 3.14159f;
+        }
+    }
+
+    // Update orientation
+    if (currentSpeed > 0.1f)
+    {
+        monsterKinematic.orientation = std::atan2(monsterKinematic.velocity.y,
+                                                  monsterKinematic.velocity.x) *
+                                       180.0f / 3.14159f;
+    }
 }
 
 void Monster::followPath(float deltaTime)
@@ -399,8 +456,24 @@ void Monster::followPath(float deltaTime)
     monsterKinematic.velocity += steering.linear * deltaTime;
     monsterKinematic.rotation += steering.angular * deltaTime;
 
-    // Update position
-    monsterKinematic.update(deltaTime);
+    // Calculate proposed position with collision check
+    sf::Vector2f proposedPosition = monsterKinematic.position + monsterKinematic.velocity * deltaTime;
+
+    if (!checkCollision(proposedPosition))
+    {
+        // Safe to move
+        monsterKinematic.update(deltaTime);
+    }
+    else
+    {
+        // Hit obstacle, stop and recalculate path
+        monsterKinematic.velocity = {0, 0};
+        // Recalculate path if target is player
+        if (playerKinematic)
+        {
+            pathfindToPlayer();
+        }
+    }
 
     // Check if we've reached the waypoint
     if (distance < 15.0f)
@@ -409,68 +482,153 @@ void Monster::followPath(float deltaTime)
     }
 }
 
-void Monster::doDance(float deltaTime)
-{
-    // Ensure we have a dance path
-    if (dancePath.empty())
-    {
-        return;
-    }
-
+void Monster::doDance(float deltaTime) {
     // Initialize dance if needed
-    if (!isDancing)
-    {
+    if (!isDancing) {
         isDancing = true;
         danceTimer = 0;
-        currentWaypointIndex = 0;
+        
+        // Set target rotation speed (degrees per second)
+        static const float ROTATION_SPEED = 360.0f; // One full rotation per second
+        monsterKinematic.rotation = ROTATION_SPEED;
+        
+        // Stop movement during dance
+        monsterKinematic.velocity = {0, 0};
     }
-
-    // Get current dance point
-    sf::Vector2f targetPos = dancePath[currentWaypointIndex % dancePath.size()];
-
-    // Create target kinematic
-    Kinematic targetKinematic;
-    targetKinematic.position = targetPos;
-
-    // Calculate direction to dance point
-    sf::Vector2f direction = targetPos - monsterKinematic.position;
-    float distance = std::sqrt(direction.x * direction.x + direction.y * direction.y);
-
-    // Calculate desired orientation
-    if (distance > 0.1f)
-    {
-        float angle = std::atan2(direction.y, direction.x) * 180.0f / 3.14159f;
-        targetKinematic.orientation = angle;
-    }
-
-    // Apply arrive behavior to move to dance point
-    SteeringData steering = arriveBehavior.calculateAcceleration(monsterKinematic, targetKinematic);
-
-    // Apply align behavior to face the right direction
-    SteeringData alignSteering = alignBehavior.calculateAcceleration(monsterKinematic, targetKinematic);
-    steering.angular = alignSteering.angular;
-
-    // Apply steering
-    monsterKinematic.velocity += steering.linear * deltaTime;
-    monsterKinematic.rotation += steering.angular * deltaTime;
-
-    // Update position
-    monsterKinematic.update(deltaTime);
-
+    
     // Update dance timer
     danceTimer += deltaTime;
-
-    // Check if we've reached the dance point
-    if (distance < 10.0f)
-    {
-        currentWaypointIndex++;
+    
+    // Rotate in place
+    monsterKinematic.orientation += monsterKinematic.rotation * deltaTime;
+    
+    // Keep orientation in range [0, 360)
+    while (monsterKinematic.orientation >= 360.0f) {
+        monsterKinematic.orientation -= 360.0f;
     }
-
-    // End dance after a certain time
-    if (danceTimer > 5.0f)
-    {
+    
+    // End dance after two rotations (2 seconds at 360 degrees/second)
+    if (danceTimer > 2.0f) {
         isDancing = false;
+        monsterKinematic.rotation = 0;
     }
+}
+
+void Monster::flee(float deltaTime)
+{
+    sf::Vector2f fleeDirection = {0, 0};
+    float nearestObstacleDistance = 1000.0f;
+
+    // Check in 8 directions to find nearest obstacle
+    for (int angle = 0; angle < 360; angle += 45)
+    {
+        float radian = angle * 3.14159f / 180.0f;
+        float dx = std::cos(radian);
+        float dy = std::sin(radian);
+
+        // Check points along this direction
+        for (float dist = 10.0f; dist <= 100.0f; dist += 10.0f)
+        {
+            sf::Vector2f checkPoint(monsterKinematic.position.x + dx * dist,
+                                    monsterKinematic.position.y + dy * dist);
+
+            if (environment.isObstacle(checkPoint))
+            {
+                if (dist < nearestObstacleDistance)
+                {
+                    nearestObstacleDistance = dist;
+                    // Flee in opposite direction
+                    fleeDirection = sf::Vector2f(-dx, -dy);
+                }
+                break;
+            }
+        }
+    }
+
+    // If no obstacles found, flee away from last known position
+    if (fleeDirection.x == 0 && fleeDirection.y == 0)
+    {
+        fleeDirection = monsterKinematic.position - sf::Vector2f(monsterKinematic.position.x + monsterKinematic.velocity.x,
+                                                                 monsterKinematic.position.y + monsterKinematic.velocity.y);
+
+        float length = std::sqrt(fleeDirection.x * fleeDirection.x + fleeDirection.y * fleeDirection.y);
+        if (length > 0)
+        {
+            fleeDirection /= length;
+        }
+        else
+        {
+            // Random direction
+            float angle = (rand() % 360) * 3.14159f / 180.0f;
+            fleeDirection = sf::Vector2f(std::cos(angle), std::sin(angle));
+        }
+    }
+
+    // Set velocity to flee
+    float fleeSpeed = 200.0f;
+    monsterKinematic.velocity = fleeDirection * fleeSpeed;
+
+    // Update orientation to match flee direction
+    monsterKinematic.orientation = std::atan2(fleeDirection.y, fleeDirection.x) * 180.0f / 3.14159f;
+
+    // Check for collision
+    sf::Vector2f proposedPosition = monsterKinematic.position + monsterKinematic.velocity * deltaTime;
+
+    if (!checkCollision(proposedPosition))
+    {
+        // Safe to move
+        monsterKinematic.update(deltaTime);
+    }
+    else
+    {
+        // Try to find a valid movement direction
+        sf::Vector2f validPosition = findValidMovement(monsterKinematic.position, proposedPosition);
+        monsterKinematic.position = validPosition;
+    }
+}
+
+bool Monster::checkCollision(sf::Vector2f proposedPosition) const
+{
+    return environment.isObstacle(proposedPosition);
+}
+
+sf::Vector2f Monster::findValidMovement(sf::Vector2f currentPos, sf::Vector2f proposedPos) const
+{
+    // Calculate movement vector
+    sf::Vector2f movementVector = proposedPos - currentPos;
+    float movementLength = std::sqrt(movementVector.x * movementVector.x + movementVector.y * movementVector.y);
+
+    if (movementLength < 0.01f)
+    {
+        return currentPos; // No movement
+    }
+
+    // Try moving in just X direction
+    sf::Vector2f xOnlyPos(proposedPos.x, currentPos.y);
+    if (!environment.isObstacle(xOnlyPos))
+    {
+        return xOnlyPos;
+    }
+
+    // Try moving in just Y direction
+    sf::Vector2f yOnlyPos(currentPos.x, proposedPos.y);
+    if (!environment.isObstacle(yOnlyPos))
+    {
+        return yOnlyPos;
+    }
+
+    // Try various fractions of the movement
+    for (float fraction = 0.75f; fraction >= 0.1f; fraction -= 0.15f)
+    {
+        sf::Vector2f fractionPos = currentPos + movementVector * fraction;
+        if (!environment.isObstacle(fractionPos))
+        {
+            return fractionPos;
+        }
+    }
+
+    // No valid position found, stay in place
+    return currentPos;
 }
 
 void Monster::updateSprite()

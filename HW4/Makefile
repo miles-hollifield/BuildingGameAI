@@ -69,3 +69,4 @@ endif
 clean:
 	rm -f $(ALL_OBJ) hw4
 	rm -f *.dat
+	rm -f behavior_data.csv

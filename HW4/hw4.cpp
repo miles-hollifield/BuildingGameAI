@@ -39,8 +39,8 @@
 // Forward declarations
 Environment createIndoorEnvironment(int width, int height);
 std::shared_ptr<BehaviorTree> createMonsterBehaviorTree(Monster &monster);
-std::shared_ptr<DecisionTree> createCharacterDecisionTree(EnvironmentState &state);
-std::shared_ptr<DecisionTree> learnDecisionTreeFromBehaviorTree(const std::string &dataFile);
+std::shared_ptr<DecisionTree> createCharacterDecisionTree(EnvironmentState &state, Environment &environment);
+std::shared_ptr<DecisionTree> learnDecisionTreeFromBehaviorTree(const std::string &dataFile, Environment &environment, EnvironmentState &state);
 void recordBehaviorTreeData(Monster &monster, const std::string &outputFile, int frames);
 
 /**
@@ -185,8 +185,8 @@ int main()
     }
 
     // Set up decision tree for the player
-    EnvironmentState playerState(player.getKinematic());
-    std::shared_ptr<DecisionTree> playerDecisionTree = createCharacterDecisionTree(playerState);
+    EnvironmentState playerState(player.getKinematic(), environment);
+    std::shared_ptr<DecisionTree> playerDecisionTree = createCharacterDecisionTree(playerState, environment);
 
     // Variables for controlling simulation
     bool showBehaviorTreeMonster = true;
@@ -280,8 +280,11 @@ int main()
                 }
                 else if (event.key.code == sf::Keyboard::Num2)
                 {
+                    Kinematic dummyKinematic;
+                    EnvironmentState dummyState(dummyKinematic, environment);
+
                     // Learn decision tree from recorded data
-                    std::shared_ptr<DecisionTree> learnedTree = learnDecisionTreeFromBehaviorTree(recordingFilename);
+                    std::shared_ptr<DecisionTree> learnedTree = learnDecisionTreeFromBehaviorTree(recordingFilename, environment, dummyState);
                     if (learnedTree)
                     {
                         decisionTreeMonster.setDecisionTree(learnedTree);
@@ -527,7 +530,7 @@ std::shared_ptr<BehaviorTree> createMonsterBehaviorTree(Monster &monster)
     auto pathfindToPlayerAction = std::make_shared<BehaviorActionNode>(
         [&monster]()
         {
-            monster.executeAction("PathfindToPlayer", 0.0f);
+            monster.executeAction("PathfindToPlayer", monster.getDeltaTime());
             return BehaviorStatus::SUCCESS;
         },
         "PathfindToPlayer");
@@ -535,7 +538,7 @@ std::shared_ptr<BehaviorTree> createMonsterBehaviorTree(Monster &monster)
     auto wanderAction = std::make_shared<BehaviorActionNode>(
         [&monster]()
         {
-            monster.executeAction("Wander", 0.0f);
+            monster.executeAction("Wander", monster.getDeltaTime());
             return BehaviorStatus::SUCCESS;
         },
         "Wander");
@@ -543,15 +546,23 @@ std::shared_ptr<BehaviorTree> createMonsterBehaviorTree(Monster &monster)
     auto danceAction = std::make_shared<BehaviorActionNode>(
         [&monster]()
         {
-            monster.executeAction("Dance", 0.0f);
+            monster.executeAction("Dance", monster.getDeltaTime());
             return BehaviorStatus::SUCCESS;
         },
         "Dance");
+        
+    auto fleeAction = std::make_shared<BehaviorActionNode>(
+        [&monster]()
+        {
+            monster.executeAction("Flee", monster.getDeltaTime());
+            return BehaviorStatus::SUCCESS;
+        },
+        "Flee");
 
     auto idleAction = std::make_shared<BehaviorActionNode>(
         [&monster]()
         {
-            monster.executeAction("Idle", 0.0f);
+            monster.executeAction("Idle", monster.getDeltaTime());
             return BehaviorStatus::SUCCESS;
         },
         "Idle");
@@ -571,7 +582,7 @@ std::shared_ptr<BehaviorTree> createMonsterBehaviorTree(Monster &monster)
     auto canSeePlayerCondition = std::make_shared<ConditionNode>(
         [&monster]() -> bool
         {
-            // Simple implementation: just check if player is in a 45-degree cone in front of monster
+            // Check if player is in a 45-degree cone in front of monster
             sf::Vector2f toPlayer = monster.getPlayerKinematic().position - monster.getKinematic().position;
             float distance = std::sqrt(toPlayer.x * toPlayer.x + toPlayer.y * toPlayer.y);
 
@@ -593,6 +604,14 @@ std::shared_ptr<BehaviorTree> createMonsterBehaviorTree(Monster &monster)
         },
         "CanSeePlayer");
 
+    auto isNearObstacleCondition = std::make_shared<ConditionNode>(
+        [&monster]() -> bool {
+            // This would normally check for nearby obstacles
+            // Simplified version - random chance (30%)
+            return (rand() % 100) < 30;
+        },
+        "IsNearObstacle");
+
     auto hasDancedRecentlyCondition = std::make_shared<ConditionNode>(
         [&monster]() -> bool
         {
@@ -609,8 +628,25 @@ std::shared_ptr<BehaviorTree> createMonsterBehaviorTree(Monster &monster)
             return (rand() % 100) < 5;
         },
         "ShouldDance");
+        
+    auto isMovingFastCondition = std::make_shared<ConditionNode>(
+        [&monster]() -> bool
+        {
+            // Check if monster is moving fast
+            float speed = std::sqrt(
+                monster.getKinematic().velocity.x * monster.getKinematic().velocity.x +
+                monster.getKinematic().velocity.y * monster.getKinematic().velocity.y);
+            return speed > 100.0f;
+        },
+        "IsMovingFast");
 
     // Now the composite nodes that use these conditions
+
+    // Flee sequence: If near obstacle and moving fast, flee
+    auto fleeSequence = std::make_shared<SequenceNode>("Flee Sequence");
+    fleeSequence->addChild(isNearObstacleCondition);
+    fleeSequence->addChild(isMovingFastCondition);
+    fleeSequence->addChild(fleeAction);
 
     // Chase sequence: If we can see the player, pathfind to them
     auto chaseSequence = std::make_shared<SequenceNode>("Chase Sequence");
@@ -628,13 +664,17 @@ std::shared_ptr<BehaviorTree> createMonsterBehaviorTree(Monster &monster)
     wanderFallback->addChild(danceSequence);
     wanderFallback->addChild(wanderAction);
 
-    // Main selector
+    // Main selector - prioritize actions
     auto rootSelector = std::make_shared<SelectorNode>("Root Selector");
+    rootSelector->addChild(fleeSequence);
     rootSelector->addChild(chaseSequence);
     rootSelector->addChild(wanderFallback);
 
     // Set the root node
     behaviorTree->setRootNode(rootSelector);
+    
+    // Log tree creation
+    std::cout << "Created behavior tree for monster" << std::endl;
 
     return behaviorTree;
 }
@@ -642,16 +682,24 @@ std::shared_ptr<BehaviorTree> createMonsterBehaviorTree(Monster &monster)
 /**
  * @brief Create a decision tree for the player character
  */
-std::shared_ptr<DecisionTree> createCharacterDecisionTree(EnvironmentState &state)
+std::shared_ptr<DecisionTree> createCharacterDecisionTree(EnvironmentState &state, Environment &environment)
 {
     auto decisionTree = std::make_shared<DecisionTree>(state);
 
     // Create potential target positions adjusted for environment size
     std::vector<sf::Vector2f> potentialTargets = {
-        {100, 100}, {500, 100}, {250, 250}, {100, 350}, {500, 350}};
+        {100, 100},   // Top-left room
+        {500, 100},   // Top-right room
+        {100, 350},   // Bottom-left room
+        {500, 350},   // Bottom-right room
+        {250, 250}    // Center
+    };
 
-    // Build a sample decision tree
-    decisionTree->buildSampleTree(potentialTargets);
+    // Build a complex decision tree
+    decisionTree->buildComplexTree(potentialTargets);
+
+    // Log that the decision tree was created
+    std::cout << "Created decision tree for character" << std::endl;
 
     return decisionTree;
 }
@@ -659,7 +707,7 @@ std::shared_ptr<DecisionTree> createCharacterDecisionTree(EnvironmentState &stat
 /**
  * @brief Learn a decision tree from recorded behavior tree data
  */
-std::shared_ptr<DecisionTree> learnDecisionTreeFromBehaviorTree(const std::string &dataFile)
+std::shared_ptr<DecisionTree> learnDecisionTreeFromBehaviorTree(const std::string &dataFile, Environment &environment, EnvironmentState &state)
 {
     // Create decision tree learner
     DecisionTreeLearner learner;
@@ -684,12 +732,15 @@ std::shared_ptr<DecisionTree> learnDecisionTreeFromBehaviorTree(const std::strin
     std::cout << "Learned Decision Tree:" << std::endl;
     std::cout << learner.printTree() << std::endl;
 
+    // Save tree to a file for reference
+    learner.saveTree("learned_decision_tree.txt");
+
     // Create a decision tree that uses the learned tree
     class LearnedDecisionTree : public DecisionTree
     {
     public:
         LearnedDecisionTree(std::shared_ptr<DTNode> root, EnvironmentState &state)
-            : DecisionTree(state), dtRoot(root) {}
+            : DecisionTree(state), dtRoot(root), state(state) {}
 
         std::string makeDecision() override
         {
@@ -702,46 +753,77 @@ std::shared_ptr<DecisionTree> learnDecisionTreeFromBehaviorTree(const std::strin
 
     private:
         std::shared_ptr<DTNode> dtRoot;
+        EnvironmentState &state;
 
         std::vector<std::string> getStateVector()
         {
             // Create a vector of state variables in the same format as the training data
-            std::vector<std::string> state;
-
-            // In a real implementation, these would be calculated based on the actual state
-            // but for this example, we'll use placeholder values
+            std::vector<std::string> stateVector;
 
             // Distance to player (discretized)
-            state.push_back("medium"); // "near", "medium", "far"
+            float distanceToPlayer = 100.0f; // Placeholder
+            if (state.getDistanceToTarget(state.getPosition()) < 50.0f) {
+                stateVector.push_back("near");
+            } else if (state.getDistanceToTarget(state.getPosition()) < 150.0f) {
+                stateVector.push_back("medium");
+            } else {
+                stateVector.push_back("far");
+            }
 
             // Relative orientation (discretized)
-            state.push_back("front"); // "front", "side", "back"
+            // This would use actual orientation in real implementation
+            int orientation = rand() % 3;
+            switch (orientation) {
+                case 0: stateVector.push_back("front"); break;
+                case 1: stateVector.push_back("side"); break;
+                case 2: stateVector.push_back("back"); break;
+            }
 
             // Speed (discretized)
-            state.push_back("slow"); // "stopped", "slow", "fast"
+            float speed = state.getSpeed();
+            if (speed < 10.0f) {
+                stateVector.push_back("stopped");
+            } else if (speed < 100.0f) {
+                stateVector.push_back("slow");
+            } else {
+                stateVector.push_back("fast");
+            }
 
-            // Can see player
-            state.push_back("1"); // "0" (false) or "1" (true)
+            // Can see player (boolean)
+            stateVector.push_back(state.canSeeTarget(state.getPosition()) ? "1" : "0");
 
-            // Is near obstacle
-            state.push_back("0"); // "0" (false) or "1" (true)
+            // Is near obstacle (boolean)
+            stateVector.push_back(state.isNearObstacle() ? "1" : "0");
 
             // Path count (discretized)
-            state.push_back("medium"); // "none", "few", "medium", "many"
+            // This would use actual path data in real implementation
+            int pathType = rand() % 4;
+            switch (pathType) {
+                case 0: stateVector.push_back("none"); break;
+                case 1: stateVector.push_back("few"); break;
+                case 2: stateVector.push_back("medium"); break;
+                case 3: stateVector.push_back("many"); break;
+            }
 
             // Time in state (discretized)
-            state.push_back("short"); // "short", "medium", "long"
+            if (state.hasBeenInCurrentState(1.0f)) {
+                stateVector.push_back("short");
+            } else if (state.hasBeenInCurrentState(3.0f)) {
+                stateVector.push_back("medium");
+            } else {
+                stateVector.push_back("long");
+            }
 
-            return state;
+            return stateVector;
         }
     };
 
     // Create a simple environment state to pass to the decision tree
-    Kinematic dummyKinematic;
-    EnvironmentState dummyState(dummyKinematic);
+    // Kinematic dummyKinematic;
+    // EnvironmentState dummyState(dummyKinematic, environment);
 
     // Create the learned decision tree
-    return std::make_shared<LearnedDecisionTree>(dtRoot, dummyState);
+    return std::make_shared<LearnedDecisionTree>(dtRoot, state);
 }
 
 /**

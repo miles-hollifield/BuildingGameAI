@@ -16,8 +16,10 @@
 #include <memory>
 #include <functional>
 #include <string>
+#include <vector>
 #include <SFML/System.hpp>
 #include "Kinematic.h" // For access to the agent's kinematic data
+#include "Environment.h" // For environment state checking
 
 /**
  * @class DecisionNode
@@ -120,6 +122,122 @@ private:
 };
 
 /**
+ * @class RandomDecisionNode
+ * @brief Decision node that makes a random choice between multiple options
+ */
+class RandomDecisionNode : public DecisionNode
+{
+public:
+    /**
+     * @brief Constructor for random decision node
+     * @param name Human-readable name for the node
+     */
+    RandomDecisionNode(const std::string &name)
+    {
+        nodeName = "Random: " + name;
+    }
+
+    /**
+     * @brief Add a child node with a specific weight
+     * @param child Node to add
+     * @param weight Relative probability of selecting this child
+     */
+    void addChild(std::shared_ptr<DecisionNode> child, float weight = 1.0f)
+    {
+        children.push_back(child);
+        weights.push_back(weight);
+        totalWeight += weight;
+    }
+
+    /**
+     * @brief Make a random decision by selecting a child based on weights
+     * @return Result of the selected child
+     */
+    std::string makeDecision() override
+    {
+        if (children.empty())
+        {
+            return "Idle"; // Default action if no children
+        }
+
+        // Generate a random value
+        float randomValue = static_cast<float>(rand()) / RAND_MAX * totalWeight;
+
+        // Find which child to select
+        float cumulativeWeight = 0.0f;
+        for (size_t i = 0; i < children.size(); i++)
+        {
+            cumulativeWeight += weights[i];
+            if (randomValue <= cumulativeWeight)
+            {
+                return children[i]->makeDecision();
+            }
+        }
+
+        // Fallback to the last child
+        return children.back()->makeDecision();
+    }
+
+private:
+    std::vector<std::shared_ptr<DecisionNode>> children;
+    std::vector<float> weights;
+    float totalWeight = 0.0f;
+};
+
+/**
+ * @class PriorityNode
+ * @brief Decision node that selects the first child whose condition is true
+ */
+class PriorityNode : public DecisionNode
+{
+public:
+    /**
+     * @brief Constructor for priority node
+     * @param name Human-readable name for the node
+     */
+    PriorityNode(const std::string &name)
+    {
+        nodeName = "Priority: " + name;
+    }
+
+    /**
+     * @brief Add a child with a condition
+     * @param condition Function that returns true if this child should be selected
+     * @param child Node to evaluate if condition is true
+     * @param conditionName Human-readable name for the condition
+     */
+    void addChild(std::function<bool()> condition, std::shared_ptr<DecisionNode> child, const std::string &conditionName)
+    {
+        conditions.push_back(condition);
+        children.push_back(child);
+        conditionNames.push_back(conditionName);
+    }
+
+    /**
+     * @brief Make a decision by evaluating conditions in order
+     * @return Result of the first child whose condition is true
+     */
+    std::string makeDecision() override
+    {
+        for (size_t i = 0; i < children.size(); i++)
+        {
+            if (conditions[i]())
+            {
+                return children[i]->makeDecision();
+            }
+        }
+
+        // If no condition is true, return a default action
+        return "Idle";
+    }
+
+private:
+    std::vector<std::function<bool()>> conditions;
+    std::vector<std::shared_ptr<DecisionNode>> children;
+    std::vector<std::string> conditionNames;
+};
+
+/**
  * @class EnvironmentState
  * @brief Stores and computes environmental state information for use in decisions
  */
@@ -131,16 +249,16 @@ public:
      * @param character Reference to the character's kinematic data
      * @param environment Reference to the environment
      */
-    EnvironmentState(const Kinematic &character);
+    EnvironmentState(const Kinematic &character, const Environment &env);
 
     /**
      * @brief Update the state based on current conditions
      */
     void update();
 
-    // State accessors
+    // State parameters for decision making
     bool isNearObstacle(float threshold = 50.0f) const;
-    bool isMovingFast(float threshold = 150.0f) const;
+    bool isMovingFast(float threshold = 100.0f) const;
     bool isInRoom(int roomId) const;
     float getDistanceToTarget(const sf::Vector2f &target) const;
     bool hasBeenInCurrentState(float seconds) const;
@@ -148,9 +266,27 @@ public:
     bool hasCompletedPath() const;
     bool isPathBlocked() const;
     bool canSeeTarget(const sf::Vector2f &target) const;
+    bool isNearWall() const;
+    bool isInCenterOfRoom() const;
+    bool hasLineOfSightTo(const sf::Vector2f &target) const;
+    bool isMovingTowards(const sf::Vector2f &target) const;
+    bool isIdleForTooLong(float threshold = 3.0f) const;
+    bool shouldChangeTarget() const;
+    
+    // Getters for state variables
+    sf::Vector2f getPosition() const { return position; }
+    sf::Vector2f getVelocity() const { return velocity; }
+    float getSpeed() const { return speed; }
+    
+    // Set target for relative conditions
+    void setTarget(const sf::Vector2f &target);
+    
+    // Reset timer for state duration tracking
+    void resetStateTimer();
 
 private:
-    const Kinematic &characterKinematic;
+    const Kinematic &character;
+    const Environment &environment;
 
     // Cached state variables
     sf::Vector2f position;
@@ -162,6 +298,13 @@ private:
     bool reachedWaypoint;
     bool completedPath;
     bool pathBlocked;
+    sf::Vector2f currentTarget;
+    sf::Clock idleTimer;
+    bool isIdle;
+    
+    // Helper methods for state calculation
+    void findNearestObstacle();
+    int determineCurrentRoom();
 };
 
 /**
@@ -190,14 +333,25 @@ public:
     virtual std::string makeDecision();
 
     /**
-     * @brief Build a sample decision tree for controlling character movement
+     * @brief Build a complex decision tree for controlling character movement
      * @param targets List of potential target positions
      */
-    void buildSampleTree(const std::vector<sf::Vector2f> &targets);
+    void buildComplexTree(const std::vector<sf::Vector2f> &targets);
+
+    /**
+     * @brief Print the decision tree structure for debugging
+     * @param node Starting node (default: root)
+     * @param depth Current depth for indentation
+     * @return String representation of the tree
+     */
+    std::string printTree(std::shared_ptr<DecisionNode> node = nullptr, int depth = 0) const;
 
 private:
     std::shared_ptr<DecisionNode> rootNode;
     EnvironmentState &environmentState;
+    
+    // Helper method to create nodes for specific targets
+    std::shared_ptr<DecisionNode> createTargetSubtree(const sf::Vector2f &target);
 };
 
 #endif // DECISION_TREE_H
