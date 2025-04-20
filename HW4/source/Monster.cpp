@@ -14,6 +14,7 @@
 #include <iostream>
 #include <fstream>
 
+// First, update the Monster constructor to include proper breadcrumb initialization
 Monster::Monster(sf::Vector2f startPosition, sf::Texture &texture, Environment &environment, Graph &graph, sf::Color color)
     : monsterKinematic(startPosition),
       startPosition(startPosition),
@@ -40,6 +41,10 @@ Monster::Monster(sf::Vector2f startPosition, sf::Texture &texture, Environment &
 
     // Set the sprite color to distinguish it from the player
     sprite.setColor(color);
+    
+    // Set the breadcrumb color based on monster color (but more transparent)
+    breadcrumbColor = color;
+    breadcrumbColor.a = 150; // Make breadcrumbs semi-transparent
 
     // Set up dance path (a simple circle)
     for (int i = 0; i < 12; i++)
@@ -98,6 +103,7 @@ void Monster::reset()
 
     // Clear breadcrumbs
     breadcrumbs.clear();
+    breadcrumbCounter = 0;
 
     // Update sprite
     updateSprite();
@@ -143,8 +149,10 @@ bool Monster::update(float deltaTime)
         }
     }
 
-    // Drop breadcrumb and update sprite
+    // Drop breadcrumb (frequency controlled by BREADCRUMB_INTERVAL)
     dropBreadcrumb();
+    
+    // Update sprite position and rotation
     updateSprite();
 
     // Return whether we've caught the player
@@ -153,7 +161,7 @@ bool Monster::update(float deltaTime)
 
 void Monster::draw(sf::RenderWindow &window)
 {
-    // Draw breadcrumbs
+    // Draw breadcrumbs first
     for (const auto &crumb : breadcrumbs)
     {
         window.draw(crumb);
@@ -166,7 +174,7 @@ void Monster::draw(sf::RenderWindow &window)
         for (size_t i = 0; i < currentPath.size(); i++)
         {
             lines[i].position = currentPath[i];
-            lines[i].color = sf::Color(255, 100, 100, 150); // Semi-transparent red
+            lines[i].color = sf::Color(breadcrumbColor.r, breadcrumbColor.g, breadcrumbColor.b, 100); // More transparent than breadcrumbs
         }
         window.draw(lines);
     }
@@ -206,57 +214,57 @@ void Monster::recordStateAction(std::ofstream &outputFile)
         return;
     }
 
-    // Calculate state variables
+    // Calculate distance to player (same as before)
     float distanceToPlayer = std::sqrt(
         std::pow(playerKinematic->position.x - monsterKinematic.position.x, 2) +
         std::pow(playerKinematic->position.y - monsterKinematic.position.y, 2));
+    
+    // Record the raw numeric value - our learning algorithm will convert to categories
+    outputFile << distanceToPlayer << ",";
 
+    // Calculate relative orientation (same as before)
     float relativeOrientation = playerKinematic->orientation - monsterKinematic.orientation;
-    while (relativeOrientation > 180)
-        relativeOrientation -= 360;
-    while (relativeOrientation < -180)
-        relativeOrientation += 360;
+    while (relativeOrientation > 180) relativeOrientation -= 360;
+    while (relativeOrientation < -180) relativeOrientation += 360;
+    outputFile << relativeOrientation << ",";
 
+    // Calculate speed (same as before)
     float speed = std::sqrt(
         monsterKinematic.velocity.x * monsterKinematic.velocity.x +
         monsterKinematic.velocity.y * monsterKinematic.velocity.y);
+    outputFile << speed << ",";
 
-    // Determine if player is in line of sight
+    // Line of sight check (same as before)
     bool canSeePlayer = environment.hasLineOfSight(monsterKinematic.position, playerKinematic->position);
+    outputFile << (canSeePlayer ? "1" : "0") << ",";
 
-    // Determine if obstacles are nearby
+    // Obstacle check (same as before)
     bool isNearObstacle = false;
     const float CHECK_DISTANCE = 50.0f;
-
-    // Check in 8 directions (N, NE, E, SE, S, SW, W, NW)
     for (int angle = 0; angle < 360; angle += 45)
     {
         float radian = angle * 3.14159f / 180.0f;
         float dx = std::cos(radian);
         float dy = std::sin(radian);
-
         sf::Vector2f checkPoint(monsterKinematic.position.x + dx * CHECK_DISTANCE,
-                                monsterKinematic.position.y + dy * CHECK_DISTANCE);
-
+                               monsterKinematic.position.y + dy * CHECK_DISTANCE);
         if (environment.isObstacle(checkPoint))
         {
             isNearObstacle = true;
             break;
         }
     }
+    outputFile << (isNearObstacle ? "1" : "0") << ",";
 
-    // Count how many paths have been generated
+    // Path count
     int pathCount = currentPath.size();
+    outputFile << pathCount << ",";
 
-    // Write state-action record to file
-    outputFile << distanceToPlayer << ","
-               << relativeOrientation << ","
-               << speed << ","
-               << (canSeePlayer ? "1" : "0") << ","
-               << (isNearObstacle ? "1" : "0") << ","
-               << pathCount << ","
-               << timeInCurrentAction << ","
-               << currentAction << std::endl;
+    // Time in current action
+    outputFile << timeInCurrentAction << ",";
+
+    // Current action - IMPORTANT: Make sure these match the action strings in executeAction()
+    outputFile << currentAction << std::endl;
 }
 
 void Monster::executeAction(const std::string &action, float deltaTime)
@@ -733,14 +741,19 @@ void Monster::updateSprite()
 
 void Monster::dropBreadcrumb()
 {
-    sf::CircleShape crumb(3.0f);
-    crumb.setFillColor(sf::Color(255, 0, 0, 150)); // Semi-transparent red
-    crumb.setPosition(monsterKinematic.position - sf::Vector2f(3.0f, 3.0f));
-    breadcrumbs.push_back(crumb);
-
-    // Limit the number of breadcrumbs
-    if (breadcrumbs.size() > MAX_BREADCRUMBS)
+    breadcrumbCounter++;
+    if (breadcrumbCounter >= BREADCRUMB_INTERVAL)
     {
-        breadcrumbs.pop_front();
+        breadcrumbCounter = 0;
+        sf::CircleShape crumb(2.5f); // Slightly smaller than player breadcrumbs
+        crumb.setFillColor(breadcrumbColor);
+        crumb.setPosition(monsterKinematic.position - sf::Vector2f(2.5f, 2.5f)); // Center the crumb
+        breadcrumbs.push_back(crumb);
+
+        // Limit the number of breadcrumbs
+        if (breadcrumbs.size() > MAX_BREADCRUMBS)
+        {
+            breadcrumbs.pop_front();
+        }
     }
 }

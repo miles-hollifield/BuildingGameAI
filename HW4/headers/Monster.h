@@ -28,6 +28,7 @@
 // Forward declarations
 class BehaviorTree;
 class DecisionTree;
+class EnvironmentState;
 
 /**
  * @class Monster
@@ -162,6 +163,36 @@ public:
      */
     bool getIsDancing() const { return isDancing; }
 
+    /**
+     * @brief Get the current path count (for decision tree learning)
+     * @return Number of waypoints in the current path
+     */
+    int getPathCount() const { return currentPath.size(); }
+
+    /**
+     * @brief Check if the monster has an active path
+     * @return True if the monster has a non-empty path
+     */
+    bool hasActivePath() const { return !currentPath.empty(); }
+
+    /**
+     * @brief Get the time spent in the current action
+     * @return Time in seconds
+     */
+    float getTimeInCurrentAction() const { return timeInCurrentAction; }
+
+    /**
+     * @brief Get the current action
+     * @return String representation of the current action
+     */
+    std::string getCurrentAction() const { return currentAction; }
+    
+    /**
+     * @brief Create an environment state for this monster
+     * @return Shared pointer to an environment state object
+     */
+    std::shared_ptr<EnvironmentState> createEnvironmentState();
+
 private:
     // Entity data
     Kinematic monsterKinematic;
@@ -215,8 +246,9 @@ private:
     // Breadcrumb trail for visualization
     std::deque<sf::CircleShape> breadcrumbs;
     int breadcrumbCounter;
-    static constexpr int BREADCRUMB_INTERVAL = 15;
-    static constexpr int MAX_BREADCRUMBS = 30;
+    sf::Color breadcrumbColor;
+    static constexpr int BREADCRUMB_INTERVAL = 120; // More frequent breadcrumbs than before
+    static constexpr int MAX_BREADCRUMBS = 30; // Store more breadcrumbs
     void dropBreadcrumb();
 };
 

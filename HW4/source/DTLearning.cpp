@@ -103,7 +103,7 @@ bool DecisionTreeLearner::loadData(const std::string &filename, bool skipHeader)
         }
     }
 
-    // Read data
+    // Read data and discretize numeric values
     while (std::getline(file, line))
     {
         std::istringstream iss(line);
@@ -111,21 +111,111 @@ bool DecisionTreeLearner::loadData(const std::string &filename, bool skipHeader)
         DataPoint point;
 
         // Parse attributes
+        int attrIndex = 0;
         while (std::getline(iss, token, ','))
         {
             if (iss.peek() != EOF)
             {
-                point.attributes.push_back(token);
+                // Discretize numeric attributes based on their index
+                if (attrIndex == 0) // DistanceToPlayer
+                {
+                    try {
+                        float distance = std::stof(token);
+                        if (distance < 30.0f) point.attributes.push_back("very_near");
+                        else if (distance < 80.0f) point.attributes.push_back("near");
+                        else if (distance < 200.0f) point.attributes.push_back("medium");
+                        else point.attributes.push_back("far");
+                    } catch (...) {
+                        point.attributes.push_back(token); // Keep original if not a number
+                    }
+                }
+                else if (attrIndex == 1) // RelativeOrientation
+                {
+                    try {
+                        float orientation = std::stof(token);
+                        if (std::abs(orientation) < 30.0f) point.attributes.push_back("direct_front");
+                        else if (std::abs(orientation) < 90.0f) point.attributes.push_back("front");
+                        else if (std::abs(orientation) < 150.0f) point.attributes.push_back("side");
+                        else point.attributes.push_back("behind");
+                    } catch (...) {
+                        point.attributes.push_back(token);
+                    }
+                }
+                else if (attrIndex == 2) // Speed
+                {
+                    try {
+                        float speed = std::stof(token);
+                        if (speed < 5.0f) point.attributes.push_back("stopped");
+                        else if (speed < 50.0f) point.attributes.push_back("very_slow");
+                        else if (speed < 100.0f) point.attributes.push_back("slow");
+                        else if (speed < 150.0f) point.attributes.push_back("medium_speed");
+                        else point.attributes.push_back("fast");
+                    } catch (...) {
+                        point.attributes.push_back(token);
+                    }
+                }
+                else if (attrIndex == 3 || attrIndex == 4) // CanSeePlayer, IsNearObstacle (binary)
+                {
+                    point.attributes.push_back(token);
+                }
+                else if (attrIndex == 5) // PathCount
+                {
+                    try {
+                        int count = std::stoi(token);
+                        if (count == 0) point.attributes.push_back("none");
+                        else if (count < 3) point.attributes.push_back("very_few");
+                        else if (count < 7) point.attributes.push_back("few");
+                        else if (count < 15) point.attributes.push_back("medium");
+                        else point.attributes.push_back("many");
+                    } catch (...) {
+                        point.attributes.push_back(token);
+                    }
+                }
+                else if (attrIndex == 6) // TimeInCurrentAction
+                {
+                    try {
+                        float time = std::stof(token);
+                        if (time < 0.5f) point.attributes.push_back("very_short");
+                        else if (time < 1.5f) point.attributes.push_back("short");
+                        else if (time < 3.0f) point.attributes.push_back("medium");
+                        else if (time < 5.0f) point.attributes.push_back("long");
+                        else point.attributes.push_back("very_long");
+                    } catch (...) {
+                        point.attributes.push_back(token);
+                    }
+                }
+                else
+                {
+                    point.attributes.push_back(token); // Keep other attributes as-is
+                }
+                attrIndex++;
             }
             else
             {
-                // Last token is the label
+                // Last token is the label (action)
                 point.label = token;
                 break;
             }
         }
 
-        data.push_back(point);
+        // Add validation to ensure we have a complete data point
+        if (!point.attributes.empty() && !point.label.empty())
+        {
+            data.push_back(point);
+        }
+    }
+
+    // Print some statistics for debugging
+    std::map<std::string, int> labelCounts;
+    for (const auto &example : data)
+    {
+        labelCounts[example.label]++;
+    }
+
+    std::cout << "Loaded " << data.size() << " data points with " << labelCounts.size() << " different actions:" << std::endl;
+    for (const auto &count : labelCounts)
+    {
+        std::cout << "  - " << count.first << ": " << count.second << " examples" << std::endl;
     }
 
     return !data.empty();
@@ -220,7 +310,6 @@ std::shared_ptr<DTNode> DecisionTreeLearner::buildTree(
     const std::vector<int> &attributes,
     const std::vector<DataPoint> &parentExamples)
 {
-
     // If examples is empty, return the majority label from parent examples
     if (examples.empty())
     {
@@ -239,9 +328,12 @@ std::shared_ptr<DTNode> DecisionTreeLearner::buildTree(
         return std::make_shared<DTLeafNode>(getMajorityLabel(examples));
     }
 
+    // Minimum information gain threshold to avoid splits with limited value
+    const double MIN_GAIN_THRESHOLD = 0.01;
+    
     // Find the attribute with the highest information gain
-    int bestAttributeIndex = attributes[0];
-    double bestGain = -1;
+    int bestAttributeIndex = -1;
+    double bestGain = MIN_GAIN_THRESHOLD; // Must exceed this threshold
 
     for (int attributeIndex : attributes)
     {
@@ -252,9 +344,17 @@ std::shared_ptr<DTNode> DecisionTreeLearner::buildTree(
             bestAttributeIndex = attributeIndex;
         }
     }
+    
+    // If no attribute provides sufficient information gain, return a leaf node
+    if (bestAttributeIndex == -1)
+    {
+        return std::make_shared<DTLeafNode>(getMajorityLabel(examples));
+    }
 
     // Create a new decision node
-    std::string attributeName = (bestAttributeIndex < attributeNames.size()) ? attributeNames[bestAttributeIndex] : "Attribute " + std::to_string(bestAttributeIndex);
+    std::string attributeName = (bestAttributeIndex < attributeNames.size()) ? 
+                                attributeNames[bestAttributeIndex] : 
+                                "Attribute " + std::to_string(bestAttributeIndex);
     auto node = std::make_shared<DTInternalNode>(bestAttributeIndex, attributeName);
 
     // Create a new list of attributes without the best attribute
@@ -281,11 +381,22 @@ std::shared_ptr<DTNode> DecisionTreeLearner::buildTree(
             }
         }
 
-        // Recursively build the subtree
-        auto subtree = buildTree(subExamples, remainingAttributes, examples);
+        // Add a minimum example threshold to avoid overfitting
+        const int MIN_EXAMPLES_FOR_SPLIT = 3;
+        
+        if (subExamples.size() < MIN_EXAMPLES_FOR_SPLIT)
+        {
+            // Too few examples for this value, use majority class from parent
+            node->addChild(value, std::make_shared<DTLeafNode>(getMajorityLabel(examples)));
+        }
+        else
+        {
+            // Recursively build the subtree
+            auto subtree = buildTree(subExamples, remainingAttributes, examples);
 
-        // Add the subtree to the decision node
-        node->addChild(value, subtree);
+            // Add the subtree to the decision node
+            node->addChild(value, subtree);
+        }
     }
 
     return node;

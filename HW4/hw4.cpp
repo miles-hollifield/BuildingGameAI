@@ -35,12 +35,13 @@
 #include "headers/BehaviorTree.h"
 #include "headers/Monster.h"
 #include "headers/DTLearning.h"
+#include "headers/LearnedDecisionTree.h"
 
 // Forward declarations
 Environment createIndoorEnvironment(int width, int height);
 std::shared_ptr<BehaviorTree> createMonsterBehaviorTree(Monster &monster);
 std::shared_ptr<DecisionTree> createCharacterDecisionTree(EnvironmentState &state, Environment &environment);
-std::shared_ptr<DecisionTree> learnDecisionTreeFromBehaviorTree(const std::string &dataFile, Environment &environment, EnvironmentState &state);
+std::shared_ptr<DecisionTree> learnDecisionTreeFromBehaviorTree(const std::string &dataFile, Monster &monster);
 void recordBehaviorTreeData(Monster &monster, const std::string &outputFile, int frames);
 
 /**
@@ -85,7 +86,7 @@ Environment createIndoorEnvironment(int width, int height)
     // Add obstacles within rooms - made smaller
 
     // Top-right room obstacles
-    env.addObstacle(sf::FloatRect(410, 80, 20, 30)); // Reduced from 30x40
+    //env.addObstacle(sf::FloatRect(410, 80, 20, 30)); // Reduced from 30x40
 
     // Middle-left room obstacles
     env.addObstacle(sf::FloatRect(80, 240, 30, 20)); // Reduced from 40x30
@@ -278,11 +279,8 @@ int main()
                 }
                 else if (event.key.code == sf::Keyboard::Num2)
                 {
-                    Kinematic dummyKinematic;
-                    EnvironmentState dummyState(dummyKinematic, environment);
-
                     // Learn decision tree from recorded data
-                    std::shared_ptr<DecisionTree> learnedTree = learnDecisionTreeFromBehaviorTree(recordingFilename, environment, dummyState);
+                    std::shared_ptr<DecisionTree> learnedTree = learnDecisionTreeFromBehaviorTree(recordingFilename, decisionTreeMonster);
                     if (learnedTree)
                     {
                         decisionTreeMonster.setDecisionTree(learnedTree);
@@ -780,6 +778,23 @@ std::shared_ptr<BehaviorTree> createMonsterBehaviorTree(Monster &monster)
     return behaviorTree;
 }
 
+std::shared_ptr<EnvironmentState> Monster::createEnvironmentState()
+{
+    // Create a new environment state for this monster
+    auto state = std::make_shared<EnvironmentState>(monsterKinematic, environment);
+    
+    // If we have a player kinematic, set it as the target for the state
+    if (playerKinematic)
+    {
+        state->setTarget(playerKinematic->position);
+    }
+    
+    // Update the state to reflect current conditions
+    state->update();
+    
+    return state;
+}
+
 /**
  * @brief Create a decision tree for the player character
  */
@@ -807,8 +822,11 @@ std::shared_ptr<DecisionTree> createCharacterDecisionTree(EnvironmentState &stat
 
 /**
  * @brief Learn a decision tree from recorded behavior tree data
+ * @param dataFile Path to the recorded data file
+ * @param monster Reference to the monster that will use the learned tree
+ * @return Shared pointer to the learned decision tree
  */
-std::shared_ptr<DecisionTree> learnDecisionTreeFromBehaviorTree(const std::string &dataFile, Environment &environment, EnvironmentState &state)
+std::shared_ptr<DecisionTree> learnDecisionTreeFromBehaviorTree(const std::string &dataFile, Monster &monster)
 {
     // Create decision tree learner
     DecisionTreeLearner learner;
@@ -826,136 +844,31 @@ std::shared_ptr<DecisionTree> learnDecisionTreeFromBehaviorTree(const std::strin
         return nullptr;
     }
 
+    std::cout << "Loaded " << dataFile << " for learning" << std::endl;
+
     // Learn decision tree
     std::shared_ptr<DTNode> dtRoot = learner.learnTree();
+    if (!dtRoot)
+    {
+        std::cerr << "Failed to learn decision tree" << std::endl;
+        return nullptr;
+    }
+
+    std::cout << "Successfully learned decision tree" << std::endl;
 
     // Print the learned tree
-    std::cout << "Learned Decision Tree:" << std::endl;
-    std::cout << learner.printTree() << std::endl;
+    std::cout << "\nLEARNED DECISION TREE STRUCTURE:\n";
+    std::cout << "--------------------------------\n";
+    std::cout << learner.printTree() << "\n";
+    std::cout << "--------------------------------\n";
 
     // Save tree to a file for reference
     learner.saveTree("learned_decision_tree.txt");
+    std::cout << "Saved tree structure to learned_decision_tree.txt" << std::endl;
 
     // Create a decision tree that uses the learned tree
-    class LearnedDecisionTree : public DecisionTree
-    {
-    public:
-        LearnedDecisionTree(std::shared_ptr<DTNode> root, EnvironmentState &state)
-            : DecisionTree(state), dtRoot(root), state(state) {}
-
-        std::string makeDecision() override
-        {
-            // Gather state variables from environment
-            std::vector<std::string> stateVector = getStateVector();
-
-            // Classify using the learned tree
-            return dtRoot->classify(stateVector);
-        }
-
-    private:
-        std::shared_ptr<DTNode> dtRoot;
-        EnvironmentState &state;
-
-        std::vector<std::string> getStateVector()
-        {
-            // Create a vector of state variables in the same format as the training data
-            std::vector<std::string> stateVector;
-
-            // Distance to player (discretized)
-            float distanceToPlayer = 100.0f; // Placeholder
-            if (state.getDistanceToTarget(state.getPosition()) < 50.0f)
-            {
-                stateVector.push_back("near");
-            }
-            else if (state.getDistanceToTarget(state.getPosition()) < 150.0f)
-            {
-                stateVector.push_back("medium");
-            }
-            else
-            {
-                stateVector.push_back("far");
-            }
-
-            // Relative orientation (discretized)
-            // This would use actual orientation in real implementation
-            int orientation = rand() % 3;
-            switch (orientation)
-            {
-            case 0:
-                stateVector.push_back("front");
-                break;
-            case 1:
-                stateVector.push_back("side");
-                break;
-            case 2:
-                stateVector.push_back("back");
-                break;
-            }
-
-            // Speed (discretized)
-            float speed = state.getSpeed();
-            if (speed < 10.0f)
-            {
-                stateVector.push_back("stopped");
-            }
-            else if (speed < 100.0f)
-            {
-                stateVector.push_back("slow");
-            }
-            else
-            {
-                stateVector.push_back("fast");
-            }
-
-            // Can see player (boolean)
-            stateVector.push_back(state.canSeeTarget(state.getPosition()) ? "1" : "0");
-
-            // Is near obstacle (boolean)
-            stateVector.push_back(state.isNearObstacle() ? "1" : "0");
-
-            // Path count (discretized)
-            // This would use actual path data in real implementation
-            int pathType = rand() % 4;
-            switch (pathType)
-            {
-            case 0:
-                stateVector.push_back("none");
-                break;
-            case 1:
-                stateVector.push_back("few");
-                break;
-            case 2:
-                stateVector.push_back("medium");
-                break;
-            case 3:
-                stateVector.push_back("many");
-                break;
-            }
-
-            // Time in state (discretized)
-            if (state.hasBeenInCurrentState(1.0f))
-            {
-                stateVector.push_back("short");
-            }
-            else if (state.hasBeenInCurrentState(3.0f))
-            {
-                stateVector.push_back("medium");
-            }
-            else
-            {
-                stateVector.push_back("long");
-            }
-
-            return stateVector;
-        }
-    };
-
-    // Create a simple environment state to pass to the decision tree
-    // Kinematic dummyKinematic;
-    // EnvironmentState dummyState(dummyKinematic, environment);
-
-    // Create the learned decision tree
-    return std::make_shared<LearnedDecisionTree>(dtRoot, state);
+    std::cout << "Creating LearnedDecisionTree instance" << std::endl;
+    return std::make_shared<LearnedDecisionTree>(dtRoot, monster);
 }
 
 /**
