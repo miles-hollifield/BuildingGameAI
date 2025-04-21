@@ -4,7 +4,12 @@
  *
  * Resources Used:
  * - Book: "Artificial Intelligence for Games" by Ian Millington
- * - Book: "Game AI Pro" edited by Steve Rabin
+ * - AI Tools: OpenAI's ChatGPT
+ *
+ * OpenAI's ChatGPT was used to suggest a template header file for DecisionTree's
+ * implementation. The following prompt was used: "Create a template header file
+ * for a decision tree in C++ that includes nodes for actions, conditions, branches, and random decisions."
+ * The code provided by ChatGPT was modified to fit the context of the project.
  *
  * Author: Miles Hollifield
  * Date: 4/7/2025
@@ -18,7 +23,7 @@
 #include <string>
 #include <vector>
 #include <SFML/System.hpp>
-#include "Kinematic.h" // For access to the agent's kinematic data
+#include "Kinematic.h"   // For access to the agent's kinematic data
 #include "Environment.h" // For environment state checking
 
 /**
@@ -257,31 +262,133 @@ public:
     void update();
 
     // State parameters for decision making
+
+    /**
+     * @brief Checks if the character is near an obstacle
+     * @param threshold Distance threshold to consider as "near"
+     */
     bool isNearObstacle(float threshold = 50.0f) const;
+
+    /**
+     * @brief Checks if the character is moving fast
+     * @param threshold Speed threshold to consider as "fast"
+     */
     bool isMovingFast(float threshold = 100.0f) const;
+
+    /**
+     * @brief Checks if the character is in a specific room
+     * @param roomId ID of the room to check
+     * @return True if in the specified room, false otherwise
+     */
     bool isInRoom(int roomId) const;
+
+    /**
+     * @brief Get the distance to a target position
+     * @param target Target position to measure distance to
+     * @return Distance to the target
+     */
     float getDistanceToTarget(const sf::Vector2f &target) const;
+
+    /**
+     * @brief Checks if the character has been in the current state for a specified duration
+     * @param seconds Duration to check against
+     * @return True if the character has been in the current state for at least the specified duration
+     */
     bool hasBeenInCurrentState(float seconds) const;
+
+    /**
+     * @brief Checks if the character has reached the current waypoint
+     * @return True if the character has reached the waypoint, false otherwise
+     */
     bool hasReachedWaypoint() const;
+
+    /**
+     * @brief Checks if the character has completed the current path
+     * @return True if the character has completed the path, false otherwise
+     */
     bool hasCompletedPath() const;
+
+    /**
+     * @brief Checks if the path to the target is blocked
+     * @return True if the path is blocked, false otherwise
+     */
     bool isPathBlocked() const;
+
+    /**
+     * @brief Checks if the character can see a target position
+     * @param target Target position to check visibility against
+     * @return True if the character can see the target, false otherwise
+     */
     bool canSeeTarget(const sf::Vector2f &target) const;
+
+    /**
+     * @brief Checks if the character is near a wall or boundary
+     * @return True if the character is near a wall, false otherwise
+     */
     bool isNearWall() const;
+
+    /**
+     * @brief Checks if the character is in the center of its current room
+     * @return True if the character is in the center of the room, false otherwise
+     */
     bool isInCenterOfRoom() const;
+
+    /**
+     * @brief Checks if the character has line of sight to a target position
+     * @param target Target position to check visibility against
+     * @return True if the character has line of sight, false otherwise
+     */
     bool hasLineOfSightTo(const sf::Vector2f &target) const;
+
+    /**
+     * @brief Checks if the character is moving towards a target position
+     * @param target Target position to check movement direction towards
+     * @return True if the character is moving towards the target, false otherwise
+     */
     bool isMovingTowards(const sf::Vector2f &target) const;
+
+    /**
+     * @brief Checks if the character is idle for too long
+     * @param threshold Time in seconds to consider as "too long"
+     * @return True if the character is idle for longer than the threshold, false otherwise
+     */
     bool isIdleForTooLong(float threshold = 3.0f) const;
+
+    /**
+     * @brief Checks if the character should change its target
+     * @return True if the character should change targets, false otherwise
+     */
     bool shouldChangeTarget() const;
-    
+
     // Getters for state variables
+
+    /**
+     * @brief Get the current position of the character
+     * @return Current position as a vector
+     */
     sf::Vector2f getPosition() const { return position; }
+
+    /**
+     * @brief Get the current velocity of the character
+     * @return Current velocity as a vector
+     */
     sf::Vector2f getVelocity() const { return velocity; }
+
+    /**
+     * @brief Get the current speed of the character
+     * @return Current speed as a float
+     */
     float getSpeed() const { return speed; }
-    
-    // Set target for relative conditions
+
+    /**
+     * @brief Set the target position for the character
+     * @param target Target position to set
+     */
     void setTarget(const sf::Vector2f &target);
-    
-    // Reset timer for state duration tracking
+
+    /**
+     * @brief Reset the state timer to zero
+     */
     void resetStateTimer();
 
 private:
@@ -301,7 +408,7 @@ private:
     sf::Vector2f currentTarget;
     sf::Clock idleTimer;
     bool isIdle;
-    
+
     // Helper methods for state calculation
     void findNearestObstacle();
     int determineCurrentRoom();
@@ -349,7 +456,7 @@ public:
 private:
     std::shared_ptr<DecisionNode> rootNode;
     EnvironmentState &environmentState;
-    
+
     // Helper method to create nodes for specific targets
     std::shared_ptr<DecisionNode> createTargetSubtree(const sf::Vector2f &target);
 };

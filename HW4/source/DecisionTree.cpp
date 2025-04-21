@@ -2,6 +2,10 @@
  * @file DecisionTree.cpp
  * @brief Implementation of the Decision Tree classes.
  *
+ * Resources Used:
+ * - Book: "Artificial Intelligence for Games" by Ian Millington
+ * - AI Tools: OpenAI's ChatGPT
+ *
  * Author: Miles Hollifield
  * Date: 4/7/2025
  */
@@ -34,32 +38,35 @@ EnvironmentState::EnvironmentState(const Kinematic &character, const Environment
 
 void EnvironmentState::update()
 {
-    // Update cached values based on current conditions
+    // Update values based on current conditions
     position = character.position;
     velocity = character.velocity;
     speed = std::sqrt(velocity.x * velocity.x + velocity.y * velocity.y);
-    
+
     // Update idle state
-    if (speed < 1.0f) {
-        if (!isIdle) {
+    if (speed < 1.0f)
+    {
+        if (!isIdle)
+        {
             isIdle = true;
             idleTimer.restart();
         }
-    } else {
+    }
+    else
+    {
         isIdle = false;
     }
 
     // Calculate other state values
     findNearestObstacle();
     currentRoom = determineCurrentRoom();
-    
+
     // Determine path status
-    // Note: In a full implementation, these would be calculated based on path following state
-    // from a PathFollower or similar class. For now, we'll use simplified assumptions.
-    if (currentTarget != sf::Vector2f(0, 0)) {
+    if (currentTarget != sf::Vector2f(0, 0))
+    {
         float distanceToTarget = getDistanceToTarget(currentTarget);
         reachedWaypoint = distanceToTarget < 20.0f;
-        completedPath = reachedWaypoint; // Simplified for now
+        completedPath = reachedWaypoint;
     }
 }
 
@@ -75,25 +82,27 @@ void EnvironmentState::resetStateTimer()
 
 void EnvironmentState::findNearestObstacle()
 {
-    // In a real implementation, this would scan nearby obstacles
-    // For now, we'll use a simplified version checking in 8 directions
-    
+    // Reset distance to a large value
     const float MAX_CHECK_DISTANCE = 200.0f;
     distanceToNearestObstacle = MAX_CHECK_DISTANCE;
-    
+
     // Check in 8 directions (N, NE, E, SE, S, SW, W, NW)
-    for (int angle = 0; angle < 360; angle += 45) {
+    for (int angle = 0; angle < 360; angle += 45)
+    {
         float radian = angle * 3.14159f / 180.0f;
         float dx = std::cos(radian);
         float dy = std::sin(radian);
-        
+
         // Check points along this direction
-        for (float dist = 10.0f; dist <= MAX_CHECK_DISTANCE; dist += 10.0f) {
+        for (float dist = 10.0f; dist <= MAX_CHECK_DISTANCE; dist += 10.0f)
+        {
             sf::Vector2f checkPoint(position.x + dx * dist, position.y + dy * dist);
-            
-            if (environment.isObstacle(checkPoint)) {
+
+            if (environment.isObstacle(checkPoint))
+            {
                 // Found an obstacle, update nearest distance if closer
-                if (dist < distanceToNearestObstacle) {
+                if (dist < distanceToNearestObstacle)
+                {
                     distanceToNearestObstacle = dist;
                 }
                 break;
@@ -104,25 +113,31 @@ void EnvironmentState::findNearestObstacle()
 
 int EnvironmentState::determineCurrentRoom()
 {
-    // In a real implementation, this would determine which room the character is in
-    // based on the environment's room definitions
-    
-    // Simplified implementation - divide the space into four quadrants
+    // Determine which room we're in based on position
     int roomId = 0;
-    if (position.x > 320) { // Right half
-        if (position.y > 240) { // Bottom-right
+    if (position.x > 320)
+    { // Right half
+        if (position.y > 240)
+        { // Bottom-right
             roomId = 3;
-        } else { // Top-right
+        }
+        else
+        { // Top-right
             roomId = 1;
         }
-    } else { // Left half
-        if (position.y > 240) { // Bottom-left
+    }
+    else
+    { // Left half
+        if (position.y > 240)
+        { // Bottom-left
             roomId = 2;
-        } else { // Top-left
+        }
+        else
+        { // Top-left
             roomId = 0;
         }
     }
-    
+
     return roomId;
 }
 
@@ -165,8 +180,6 @@ bool EnvironmentState::hasCompletedPath() const
 
 bool EnvironmentState::isPathBlocked() const
 {
-    // In a real implementation, this would check if there are obstacles blocking the path
-    // Simplified implementation
     return pathBlocked;
 }
 
@@ -183,20 +196,17 @@ bool EnvironmentState::isNearWall() const
 
 bool EnvironmentState::isInCenterOfRoom() const
 {
-    // Simple check to see if we're near the center of the current room
-    // In a real implementation, this would use the actual room dimensions
-    
     // Calculate approximate room centers based on quadrants
     sf::Vector2f roomCenters[4] = {
-        {160, 120},  // Top-left room
-        {480, 120},  // Top-right room
-        {160, 360},  // Bottom-left room
-        {480, 360}   // Bottom-right room
+        {160, 120}, // Top-left room
+        {480, 120}, // Top-right room
+        {160, 360}, // Bottom-left room
+        {480, 360}  // Bottom-right room
     };
-    
+
     sf::Vector2f roomCenter = roomCenters[currentRoom];
     float distanceToCenter = getDistanceToTarget(roomCenter);
-    
+
     return distanceToCenter < 50.0f;
 }
 
@@ -208,28 +218,30 @@ bool EnvironmentState::hasLineOfSightTo(const sf::Vector2f &target) const
 
 bool EnvironmentState::isMovingTowards(const sf::Vector2f &target) const
 {
-    if (speed < 5.0f) {
+    if (speed < 5.0f)
+    {
         return false; // Not really moving
     }
-    
+
     // Calculate direction to target
     sf::Vector2f dirToTarget = target - position;
     float targetDistance = std::sqrt(dirToTarget.x * dirToTarget.x + dirToTarget.y * dirToTarget.y);
-    
-    if (targetDistance < 0.1f) {
+
+    if (targetDistance < 0.1f)
+    {
         return true; // Already at target
     }
-    
+
     // Normalize
     dirToTarget /= targetDistance;
-    
+
     // Normalize velocity
     sf::Vector2f normVelocity = velocity;
     normVelocity /= speed;
-    
+
     // Dot product gives cosine of angle between vectors
     float dotProduct = dirToTarget.x * normVelocity.x + dirToTarget.y * normVelocity.y;
-    
+
     // If dot product > 0.7, angle is less than ~45 degrees (we're moving towards target)
     return dotProduct > 0.7f;
 }
@@ -241,8 +253,6 @@ bool EnvironmentState::isIdleForTooLong(float threshold) const
 
 bool EnvironmentState::shouldChangeTarget() const
 {
-    // Logic to determine if we should change targets
-    // For example, if we've been in the same state too long or are stuck
     return hasBeenInCurrentState(5.0f) || (isIdle && isIdleForTooLong(2.0f));
 }
 
@@ -271,76 +281,94 @@ std::string DecisionTree::makeDecision()
 std::shared_ptr<DecisionNode> DecisionTree::createTargetSubtree(const sf::Vector2f &target)
 {
     // Create a subtree for pursuing a specific target
-    
+
     // Define conditions for this target
-    auto isTargetVisible = [this, target]() {
+    auto isTargetVisible = [this, target]()
+    {
         return environmentState.canSeeTarget(target);
     };
-    
-    auto isNearTarget = [this, target]() {
+
+    auto isNearTarget = [this, target]()
+    {
         return environmentState.getDistanceToTarget(target) < 50.0f;
     };
-    
-    auto isMovingToTarget = [this, target]() {
+
+    auto isMovingToTarget = [this, target]()
+    {
         return environmentState.isMovingTowards(target);
     };
-    
-    auto shouldSeekNewTarget = [this]() {
+
+    auto shouldSeekNewTarget = [this]()
+    {
         return environmentState.shouldChangeTarget();
     };
-    
+
     // Create actions
     auto pathfindAction = std::make_shared<ActionNode>("PathfindToPlayer");
     auto arriveAction = std::make_shared<ActionNode>("Arrive");
     auto wanderAction = std::make_shared<ActionNode>("Wander");
-    
+
     // Build subtree
     auto approachDecision = std::make_shared<DecisionBranch>(
         isNearTarget,
-        arriveAction,  // If near target, use arrive behavior
+        arriveAction,   // If near target, use arrive behavior
         pathfindAction, // Otherwise pathfind to it
-        "Is near target?"
-    );
-    
+        "Is near target?");
+
     auto visibilityDecision = std::make_shared<DecisionBranch>(
         isTargetVisible,
         approachDecision, // If visible, approach it
         wanderAction,     // Otherwise wander
-        "Is target visible?"
-    );
-    
+        "Is target visible?");
+
     auto targetPersistenceDecision = std::make_shared<DecisionBranch>(
         shouldSeekNewTarget,
-        wanderAction,        // If should change target, wander
-        visibilityDecision,  // Otherwise continue with current target
-        "Should change target?"
-    );
-    
+        wanderAction,       // If should change target, wander
+        visibilityDecision, // Otherwise continue with current target
+        "Should change target?");
+
     return targetPersistenceDecision;
 }
 
+/**
+ * @brief Build a complex decision tree with various behaviors
+ * @param targets List of potential target positions
+ *
+ * OpenAI's ChatGPT was used to suggest a template for this function.
+ * The following prompt was used:
+ * "Create a complex decision tree for a character that includes various
+ * behaviors like fleeing, wandering, pathfinding, and dancing. Use C++
+ * and SFML for the implementation."
+ * The code provided by ChatGPT was modified to fit the context of the project.
+ */
 void DecisionTree::buildComplexTree(const std::vector<sf::Vector2f> &targets)
 {
     // Create more sophisticated decision tree with various behaviors
-    
+
     // Ensure we have some targets
-    if (targets.empty()) {
+    if (targets.empty())
+    {
         rootNode = std::make_shared<ActionNode>("Idle");
         return;
     }
-    
+
     // Random target selection for variety
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<> distrib(0, targets.size() - 1);
-    
+
     // Define common conditions and actions
-    auto isNearObstacle = [this]() { return environmentState.isNearObstacle(40.0f); };
-    auto isMovingFast = [this]() { return environmentState.isMovingFast(150.0f); };
-    auto isNearWall = [this]() { return environmentState.isNearWall(); };
-    auto shouldDance = [this]() { return (rand() % 100) < 5; }; // 5% chance to dance
-    auto isIdleTooLong = [this]() { return environmentState.isIdleForTooLong(3.0f); };
-    
+    auto isNearObstacle = [this]()
+    { return environmentState.isNearObstacle(40.0f); };
+    auto isMovingFast = [this]()
+    { return environmentState.isMovingFast(150.0f); };
+    auto isNearWall = [this]()
+    { return environmentState.isNearWall(); };
+    auto shouldDance = [this]()
+    { return (rand() % 100) < 5; }; // 5% chance to dance
+    auto isIdleTooLong = [this]()
+    { return environmentState.isIdleForTooLong(3.0f); };
+
     // Create action nodes
     auto fleeAction = std::make_shared<ActionNode>("Flee");
     auto wanderAction = std::make_shared<ActionNode>("Wander");
@@ -348,76 +376,76 @@ void DecisionTree::buildComplexTree(const std::vector<sf::Vector2f> &targets)
     auto arriveAction = std::make_shared<ActionNode>("Arrive");
     auto danceAction = std::make_shared<ActionNode>("Dance");
     auto idleAction = std::make_shared<ActionNode>("Idle");
-    
+
     // Create target-specific subtrees
     std::vector<std::shared_ptr<DecisionNode>> targetSubtrees;
-    for (const auto &target : targets) {
+    for (const auto &target : targets)
+    {
         environmentState.setTarget(target);
         targetSubtrees.push_back(createTargetSubtree(target));
     }
-    
+
     // Create a random decision node for target selection
     auto targetSelectionNode = std::make_shared<RandomDecisionNode>("Target Selection");
-    for (const auto &subtree : targetSubtrees) {
+    for (const auto &subtree : targetSubtrees)
+    {
         targetSelectionNode->addChild(subtree);
     }
-    
+
     // Special behavior decision: Dance occasionally
     auto specialBehaviorNode = std::make_shared<DecisionBranch>(
         shouldDance,
         danceAction,
         targetSelectionNode,
-        "Should perform special behavior?"
-    );
-    
+        "Should perform special behavior?");
+
     // Movement safety decision: Flee from obstacles when moving fast
     auto safetyNode = std::make_shared<DecisionBranch>(
         isNearObstacle,
-        fleeAction, // If near obstacle, flee
+        fleeAction,          // If near obstacle, flee
         specialBehaviorNode, // Otherwise continue with normal behaviors
-        "Is near obstacle?"
-    );
-    
+        "Is near obstacle?");
+
     // Main activity decision: Safety vs. Idle
     auto activityNode = std::make_shared<DecisionBranch>(
         isMovingFast,
         safetyNode, // If moving fast, check safety
         std::make_shared<DecisionBranch>(
             isIdleTooLong,
-            wanderAction, // If idle too long, wander
+            wanderAction,        // If idle too long, wander
             targetSelectionNode, // Otherwise continue with normal behaviors
-            "Idle too long?"
-        ),
-        "Is moving fast?"
-    );
-    
+            "Idle too long?"),
+        "Is moving fast?");
+
     // Set the root node
     setRootNode(activityNode);
-    
+
     // Debug output
-    //std::cout << "Decision Tree Structure:\n" << printTree() << std::endl;
+    // std::cout << "Decision Tree Structure:\n" << printTree() << std::endl;
 }
 
 std::string DecisionTree::printTree(std::shared_ptr<DecisionNode> node, int depth) const
 {
-    if (!node) {
-        if (depth == 0) {
+    if (!node)
+    {
+        if (depth == 0)
+        {
             node = rootNode;
-        } else {
+        }
+        else
+        {
             return "";
         }
     }
-    
-    if (!node) {
+
+    if (!node)
+    {
         return "Empty tree";
     }
-    
+
     std::stringstream ss;
     std::string indent(depth * 2, ' ');
     ss << indent << node->getName() << std::endl;
-    
-    // For a more complete implementation, you'd need RTTI or a visitor pattern
-    // to traverse the tree. This is a simplified version.
-    
+
     return ss.str();
 }

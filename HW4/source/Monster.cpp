@@ -2,6 +2,10 @@
  * @file Monster.cpp
  * @brief Implementation of the Monster class.
  *
+ * Resources Used:
+ * - Book: "Artificial Intelligence for Games" by Ian Millington
+ * - AI Tools: OpenAI's ChatGPT
+ *
  * Author: Miles Hollifield
  * Date: 4/7/2025
  */
@@ -14,7 +18,7 @@
 #include <iostream>
 #include <fstream>
 
-// First, update the Monster constructor to include proper breadcrumb initialization
+// Constructor for Monster
 Monster::Monster(sf::Vector2f startPosition, sf::Texture &texture, Environment &environment, Graph &graph, sf::Color color)
     : monsterKinematic(startPosition),
       startPosition(startPosition),
@@ -29,28 +33,27 @@ Monster::Monster(sf::Vector2f startPosition, sf::Texture &texture, Environment &
       isDancing(false),
       danceTimer(0),
       breadcrumbCounter(0),
-      // Initialize behaviors with appropriate parameters
       arriveBehavior(150.0f, 120.0f, 15.0f, 80.0f, 0.1f),
       alignBehavior(20.0f, 180.0f, 1.0f, 30.0f, 0.1f)
 {
     // Initialize sprite
     sprite.setTexture(texture);
-    sprite.setScale(0.05f, 0.05f); // Reduced scale to match player size
+    sprite.setScale(0.05f, 0.05f);
     sprite.setOrigin(texture.getSize().x / 2.0f, texture.getSize().y / 2.0f);
     sprite.setPosition(startPosition);
 
     // Set the sprite color to distinguish it from the player
     sprite.setColor(color);
-    
-    // Set the breadcrumb color based on monster color (but more transparent)
+
+    // Set the breadcrumb color based on monster color
     breadcrumbColor = color;
-    breadcrumbColor.a = 150; // Make breadcrumbs semi-transparent
+    breadcrumbColor.a = 150;
 
     // Set up dance path (a simple circle)
     for (int i = 0; i < 12; i++)
     {
         float angle = i * 2 * 3.14159f / 12;
-        float radius = 30.0f; // Smaller dance radius to match smaller scale
+        float radius = 30.0f;
         sf::Vector2f point = startPosition + sf::Vector2f(std::cos(angle) * radius, std::sin(angle) * radius);
         dancePath.push_back(point);
     }
@@ -128,9 +131,6 @@ bool Monster::update(float deltaTime)
             // Tick the behavior tree
             BehaviorStatus status = behaviorTree->tick();
 
-            // Note: The behavior tree actions already call executeAction()
-            // No need to call executeAction() again for this control type
-
             // If no action was set by the behavior tree, default to idle
             if (currentAction.empty())
             {
@@ -149,9 +149,9 @@ bool Monster::update(float deltaTime)
         }
     }
 
-    // Drop breadcrumb (frequency controlled by BREADCRUMB_INTERVAL)
+    // Drop breadcrumb
     dropBreadcrumb();
-    
+
     // Update sprite position and rotation
     updateSprite();
 
@@ -174,7 +174,7 @@ void Monster::draw(sf::RenderWindow &window)
         for (size_t i = 0; i < currentPath.size(); i++)
         {
             lines[i].position = currentPath[i];
-            lines[i].color = sf::Color(breadcrumbColor.r, breadcrumbColor.g, breadcrumbColor.b, 100); // More transparent than breadcrumbs
+            lines[i].color = sf::Color(breadcrumbColor.r, breadcrumbColor.g, breadcrumbColor.b, 100);
         }
         window.draw(lines);
     }
@@ -207,6 +207,16 @@ bool Monster::hasCaughtPlayer() const
     return distanceSquared < (catchDistance * catchDistance);
 }
 
+/**
+ * @brief Record the current state and action to a file.
+ * @param outputFile The output file stream to write to.
+ * OpenAI's ChatGPT was used to assist in implementing this function.
+ * The following prompt was used:
+ * "Implement a function to record the monster's state and action
+ * to a CSV file. Include distance to player, relative orientation,
+ * speed, line of sight, obstacle proximity, path count, time in current action, and current action."
+ * The code provided by ChatGPT was modified to fit the context of the project.
+ */
 void Monster::recordStateAction(std::ofstream &outputFile)
 {
     if (!outputFile.is_open() || !playerKinematic)
@@ -214,31 +224,33 @@ void Monster::recordStateAction(std::ofstream &outputFile)
         return;
     }
 
-    // Calculate distance to player (same as before)
+    // Calculate distance to player
     float distanceToPlayer = std::sqrt(
         std::pow(playerKinematic->position.x - monsterKinematic.position.x, 2) +
         std::pow(playerKinematic->position.y - monsterKinematic.position.y, 2));
-    
-    // Record the raw numeric value - our learning algorithm will convert to categories
+
+    // Record the raw numeric value
     outputFile << distanceToPlayer << ",";
 
-    // Calculate relative orientation (same as before)
+    // Calculate relative orientation
     float relativeOrientation = playerKinematic->orientation - monsterKinematic.orientation;
-    while (relativeOrientation > 180) relativeOrientation -= 360;
-    while (relativeOrientation < -180) relativeOrientation += 360;
+    while (relativeOrientation > 180)
+        relativeOrientation -= 360;
+    while (relativeOrientation < -180)
+        relativeOrientation += 360;
     outputFile << relativeOrientation << ",";
 
-    // Calculate speed (same as before)
+    // Calculate speed
     float speed = std::sqrt(
         monsterKinematic.velocity.x * monsterKinematic.velocity.x +
         monsterKinematic.velocity.y * monsterKinematic.velocity.y);
     outputFile << speed << ",";
 
-    // Line of sight check (same as before)
+    // Line of sight check
     bool canSeePlayer = environment.hasLineOfSight(monsterKinematic.position, playerKinematic->position);
     outputFile << (canSeePlayer ? "1" : "0") << ",";
 
-    // Obstacle check (same as before)
+    // Obstacle check
     bool isNearObstacle = false;
     const float CHECK_DISTANCE = 50.0f;
     for (int angle = 0; angle < 360; angle += 45)
@@ -247,7 +259,7 @@ void Monster::recordStateAction(std::ofstream &outputFile)
         float dx = std::cos(radian);
         float dy = std::sin(radian);
         sf::Vector2f checkPoint(monsterKinematic.position.x + dx * CHECK_DISTANCE,
-                               monsterKinematic.position.y + dy * CHECK_DISTANCE);
+                                monsterKinematic.position.y + dy * CHECK_DISTANCE);
         if (environment.isObstacle(checkPoint))
         {
             isNearObstacle = true;
@@ -263,7 +275,7 @@ void Monster::recordStateAction(std::ofstream &outputFile)
     // Time in current action
     outputFile << timeInCurrentAction << ",";
 
-    // Current action - IMPORTANT: Make sure these match the action strings in executeAction()
+    // Current action
     outputFile << currentAction << std::endl;
 }
 
@@ -308,13 +320,15 @@ void Monster::executeAction(const std::string &action, float deltaTime)
     }
 }
 
-void Monster::pathfindToPlayer() {
-    if (!playerKinematic) {
+void Monster::pathfindToPlayer()
+{
+    if (!playerKinematic)
+    {
         std::cout << "PATHFIND: No player kinematic set!" << std::endl;
         return;
     }
 
-    std::cout << "PATHFIND: Finding path to player at " 
+    std::cout << "PATHFIND: Finding path to player at "
               << playerKinematic->position.x << "," << playerKinematic->position.y << std::endl;
 
     // Convert positions to graph vertices
@@ -327,7 +341,8 @@ void Monster::pathfindToPlayer() {
     // Find path
     std::vector<int> path = pathfinder.findPath(navigationGraph, monsterVertex, playerVertex);
 
-    if (path.empty()) {
+    if (path.empty())
+    {
         std::cout << "PATHFIND: No path found to player!" << std::endl;
         return;
     }
@@ -336,7 +351,8 @@ void Monster::pathfindToPlayer() {
 
     // Convert path to waypoints
     currentPath.clear();
-    for (int vertex : path) {
+    for (int vertex : path)
+    {
         currentPath.push_back(navigationGraph.getVertexPosition(vertex));
     }
 
@@ -350,7 +366,7 @@ void Monster::wander(float deltaTime)
     float wanderCircleDistance = 50.0f;
     float wanderCircleRadius = 30.0f;
 
-    // Get normalized velocity direction (or use orientation if velocity is near zero)
+    // Get normalized velocity direction
     sf::Vector2f direction;
     if (std::abs(monsterKinematic.velocity.x) + std::abs(monsterKinematic.velocity.y) > 0.1f)
     {
@@ -436,9 +452,11 @@ void Monster::wander(float deltaTime)
     }
 }
 
-void Monster::followPath(float deltaTime) {
+void Monster::followPath(float deltaTime)
+{
     // Check if we have a path
-    if (currentPath.empty() || currentWaypointIndex >= currentPath.size()) {
+    if (currentPath.empty() || currentWaypointIndex >= currentPath.size())
+    {
         return;
     }
 
@@ -453,7 +471,8 @@ void Monster::followPath(float deltaTime) {
     sf::Vector2f direction = targetPos - monsterKinematic.position;
     float distance = std::sqrt(direction.x * direction.x + direction.y * direction.y);
 
-    if (distance > 0.1f) {
+    if (distance > 0.1f)
+    {
         // Normalize direction vector
         direction /= distance;
         // Set orientation directly toward the current waypoint
@@ -474,9 +493,10 @@ void Monster::followPath(float deltaTime) {
 
     // Limit velocity to max speed
     float currentSpeed = std::sqrt(monsterKinematic.velocity.x * monsterKinematic.velocity.x +
-                                  monsterKinematic.velocity.y * monsterKinematic.velocity.y);
+                                   monsterKinematic.velocity.y * monsterKinematic.velocity.y);
     const float MAX_SPEED = 150.0f;
-    if (currentSpeed > MAX_SPEED) {
+    if (currentSpeed > MAX_SPEED)
+    {
         monsterKinematic.velocity *= (MAX_SPEED / currentSpeed);
     }
 
@@ -485,12 +505,14 @@ void Monster::followPath(float deltaTime) {
 
     // Check if we've reached the waypoint
     const float WAYPOINT_THRESHOLD = 15.0f;
-    if (distance < WAYPOINT_THRESHOLD) {
+    if (distance < WAYPOINT_THRESHOLD)
+    {
         std::cout << "Monster reached waypoint " << currentWaypointIndex + 1 << "/" << currentPath.size() << std::endl;
         currentWaypointIndex++;
-        
+
         // If we've reached the end of the path, reset
-        if (currentWaypointIndex >= currentPath.size()) {
+        if (currentWaypointIndex >= currentPath.size())
+        {
             currentPath.clear();
             currentWaypointIndex = 0;
         }
@@ -561,6 +583,14 @@ bool Monster::hasLineOfSightTo(const sf::Vector2f &target) const
     return environment.hasLineOfSight(monsterKinematic.position, target);
 }
 
+/**
+ * @brief Flee behavior implementation for the monster.
+ * @param deltaTime Time since last update
+ * OpenAI's ChatGPT was used to assist in implementing this behavior.
+ * The following prompt was used:
+ * "Implement a flee behavior for the monster that determines the best direction to flee to."
+ * The code provided by ChatGPT was modified to fit the context of the project.
+ */
 void Monster::flee(float deltaTime)
 {
     std::cout << "FLEE: Starting flee behavior" << std::endl;
@@ -745,9 +775,9 @@ void Monster::dropBreadcrumb()
     if (breadcrumbCounter >= BREADCRUMB_INTERVAL)
     {
         breadcrumbCounter = 0;
-        sf::CircleShape crumb(2.5f); // Slightly smaller than player breadcrumbs
+        sf::CircleShape crumb(2.5f);
         crumb.setFillColor(breadcrumbColor);
-        crumb.setPosition(monsterKinematic.position - sf::Vector2f(2.5f, 2.5f)); // Center the crumb
+        crumb.setPosition(monsterKinematic.position - sf::Vector2f(2.5f, 2.5f));
         breadcrumbs.push_back(crumb);
 
         // Limit the number of breadcrumbs

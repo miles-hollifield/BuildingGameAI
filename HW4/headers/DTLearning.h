@@ -3,8 +3,14 @@
  * @brief Defines the Decision Tree Learning algorithm.
  *
  * Resources Used:
- * - Book: "Machine Learning" by Tom Mitchell
- * - Book: "Artificial Intelligence: A Modern Approach" by Stuart Russell and Peter Norvig
+ * - Book: "Artificial Intelligence for Games" by Ian Millington
+ * - AI Tools: OpenAI's ChatGPT
+ *
+ * OpenAI's ChatGPT was used to suggest a template header file for DTLearning's
+ * implementation. The following prompt was used: "Create a template header file
+ * for a decision tree learning algorithm in C++ that includes nodes for leaves,
+ * internal nodes, and the learning process."
+ * The code provided by ChatGPT was modified to fit the context of the project.
  *
  * Author: Miles Hollifield
  * Date: 4/7/2025

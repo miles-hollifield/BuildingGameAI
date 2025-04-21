@@ -2,6 +2,9 @@
  * @file BehaviorTree.cpp
  * @brief Implementation of the Behavior Tree classes.
  *
+ * Resources Used:
+ * - Book: "Artificial Intelligence for Games" by Ian Millington
+ *
  * Author: Miles Hollifield
  * Date: 4/7/2025
  */
@@ -56,15 +59,16 @@ void SequenceNode::reset()
 
 // SelectorNode implementation
 BehaviorStatus SelectorNode::tick()
-{        
+{
     // If not running, start from the beginning
-    if (!isRunning) {
+    if (!isRunning)
+    {
         currentChild = 0;
     }
-    
+
     // Continue from where we left off
     while (currentChild < children.size())
-    {      
+    {
         BehaviorStatus status = children[currentChild]->tick();
 
         if (status == BehaviorStatus::RUNNING)

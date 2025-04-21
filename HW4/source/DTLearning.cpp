@@ -2,6 +2,10 @@
  * @file DTLearning.cpp
  * @brief Implementation of the Decision Tree Learning algorithm.
  *
+ * Resources Used:
+ * - Book: "Artificial Intelligence for Games" by Ian Millington
+ * - AI Tools: OpenAI's ChatGPT
+ *
  * Author: Miles Hollifield
  * Date: 4/7/2025
  */
@@ -41,7 +45,7 @@ std::string DTInternalNode::classify(const std::vector<std::string> &dataPoint) 
         {
             return children.begin()->second->classify(dataPoint);
         }
-        // This should never happen in a properly formed tree
+        // This should never happen
         return "Unknown";
     }
 }
@@ -71,6 +75,18 @@ DecisionTreeLearner::DecisionTreeLearner() : rootNode(nullptr)
 {
 }
 
+/**
+ * @brief Load data from a CSV file
+ * * @param filename Name of the file to load
+ * * @param skipHeader Whether to skip the first line (header)
+ * * @return True if successful, false otherwise
+ *
+ * OpenAI's ChatGPT was used to suggest a template for this function.
+ * The following prompt was used:
+ * "Create a function to load data from a CSV file for decision tree learning in C++.
+ * The data should include attributes like DistanceToPlayer, RelativeOrientation, Speed, etc."
+ * The code provided by ChatGPT was modified to fit the context of the project.
+ */
 bool DecisionTreeLearner::loadData(const std::string &filename, bool skipHeader)
 {
     std::ifstream file(filename);
@@ -119,38 +135,60 @@ bool DecisionTreeLearner::loadData(const std::string &filename, bool skipHeader)
                 // Discretize numeric attributes based on their index
                 if (attrIndex == 0) // DistanceToPlayer
                 {
-                    try {
+                    try
+                    {
                         float distance = std::stof(token);
-                        if (distance < 30.0f) point.attributes.push_back("very_near");
-                        else if (distance < 80.0f) point.attributes.push_back("near");
-                        else if (distance < 200.0f) point.attributes.push_back("medium");
-                        else point.attributes.push_back("far");
-                    } catch (...) {
+                        if (distance < 30.0f)
+                            point.attributes.push_back("very_near");
+                        else if (distance < 80.0f)
+                            point.attributes.push_back("near");
+                        else if (distance < 200.0f)
+                            point.attributes.push_back("medium");
+                        else
+                            point.attributes.push_back("far");
+                    }
+                    catch (...)
+                    {
                         point.attributes.push_back(token); // Keep original if not a number
                     }
                 }
                 else if (attrIndex == 1) // RelativeOrientation
                 {
-                    try {
+                    try
+                    {
                         float orientation = std::stof(token);
-                        if (std::abs(orientation) < 30.0f) point.attributes.push_back("direct_front");
-                        else if (std::abs(orientation) < 90.0f) point.attributes.push_back("front");
-                        else if (std::abs(orientation) < 150.0f) point.attributes.push_back("side");
-                        else point.attributes.push_back("behind");
-                    } catch (...) {
+                        if (std::abs(orientation) < 30.0f)
+                            point.attributes.push_back("direct_front");
+                        else if (std::abs(orientation) < 90.0f)
+                            point.attributes.push_back("front");
+                        else if (std::abs(orientation) < 150.0f)
+                            point.attributes.push_back("side");
+                        else
+                            point.attributes.push_back("behind");
+                    }
+                    catch (...)
+                    {
                         point.attributes.push_back(token);
                     }
                 }
                 else if (attrIndex == 2) // Speed
                 {
-                    try {
+                    try
+                    {
                         float speed = std::stof(token);
-                        if (speed < 5.0f) point.attributes.push_back("stopped");
-                        else if (speed < 50.0f) point.attributes.push_back("very_slow");
-                        else if (speed < 100.0f) point.attributes.push_back("slow");
-                        else if (speed < 150.0f) point.attributes.push_back("medium_speed");
-                        else point.attributes.push_back("fast");
-                    } catch (...) {
+                        if (speed < 5.0f)
+                            point.attributes.push_back("stopped");
+                        else if (speed < 50.0f)
+                            point.attributes.push_back("very_slow");
+                        else if (speed < 100.0f)
+                            point.attributes.push_back("slow");
+                        else if (speed < 150.0f)
+                            point.attributes.push_back("medium_speed");
+                        else
+                            point.attributes.push_back("fast");
+                    }
+                    catch (...)
+                    {
                         point.attributes.push_back(token);
                     }
                 }
@@ -160,27 +198,43 @@ bool DecisionTreeLearner::loadData(const std::string &filename, bool skipHeader)
                 }
                 else if (attrIndex == 5) // PathCount
                 {
-                    try {
+                    try
+                    {
                         int count = std::stoi(token);
-                        if (count == 0) point.attributes.push_back("none");
-                        else if (count < 3) point.attributes.push_back("very_few");
-                        else if (count < 7) point.attributes.push_back("few");
-                        else if (count < 15) point.attributes.push_back("medium");
-                        else point.attributes.push_back("many");
-                    } catch (...) {
+                        if (count == 0)
+                            point.attributes.push_back("none");
+                        else if (count < 3)
+                            point.attributes.push_back("very_few");
+                        else if (count < 7)
+                            point.attributes.push_back("few");
+                        else if (count < 15)
+                            point.attributes.push_back("medium");
+                        else
+                            point.attributes.push_back("many");
+                    }
+                    catch (...)
+                    {
                         point.attributes.push_back(token);
                     }
                 }
                 else if (attrIndex == 6) // TimeInCurrentAction
                 {
-                    try {
+                    try
+                    {
                         float time = std::stof(token);
-                        if (time < 0.5f) point.attributes.push_back("very_short");
-                        else if (time < 1.5f) point.attributes.push_back("short");
-                        else if (time < 3.0f) point.attributes.push_back("medium");
-                        else if (time < 5.0f) point.attributes.push_back("long");
-                        else point.attributes.push_back("very_long");
-                    } catch (...) {
+                        if (time < 0.5f)
+                            point.attributes.push_back("very_short");
+                        else if (time < 1.5f)
+                            point.attributes.push_back("short");
+                        else if (time < 3.0f)
+                            point.attributes.push_back("medium");
+                        else if (time < 5.0f)
+                            point.attributes.push_back("long");
+                        else
+                            point.attributes.push_back("very_long");
+                    }
+                    catch (...)
+                    {
                         point.attributes.push_back(token);
                     }
                 }
@@ -198,7 +252,7 @@ bool DecisionTreeLearner::loadData(const std::string &filename, bool skipHeader)
             }
         }
 
-        // Add validation to ensure we have a complete data point
+        // Validation to ensure we have a complete data point
         if (!point.attributes.empty() && !point.label.empty())
         {
             data.push_back(point);
@@ -274,8 +328,7 @@ bool DecisionTreeLearner::saveTree(const std::string &filename) const
 
 bool DecisionTreeLearner::loadTree(const std::string &filename)
 {
-    // This is a simplified implementation that doesn't actually load a tree
-    // from a file. In a real implementation, you would parse the tree structure.
+    // TODO: Implement tree loading from file
     std::cerr << "Tree loading not implemented" << std::endl;
     return false;
 }
@@ -305,6 +358,21 @@ std::string DecisionTreeLearner::printTree() const
     return rootNode->toString();
 }
 
+/**
+ * @brief Recursively build the decision tree
+ * @param examples Current set of examples to consider
+ * @param attributes Remaining attributes to consider for splitting
+ * @param parentExamples Examples from the parent node for majority voting
+ * @return Root node of the subtree
+ *
+ * OpenAI's ChatGPT was used to help implement this function.
+ * The following prompt was used:
+ * "Implement a recursive function to build a decision tree
+ * from a set of examples. The function should handle cases
+ * where examples are empty, all examples have the same label,
+ * and when no attributes provide sufficient information gain."
+ * The code provided by ChatGPT was modified to fit the context of the project.
+ */
 std::shared_ptr<DTNode> DecisionTreeLearner::buildTree(
     const std::vector<DataPoint> &examples,
     const std::vector<int> &attributes,
@@ -330,7 +398,7 @@ std::shared_ptr<DTNode> DecisionTreeLearner::buildTree(
 
     // Minimum information gain threshold to avoid splits with limited value
     const double MIN_GAIN_THRESHOLD = 0.01;
-    
+
     // Find the attribute with the highest information gain
     int bestAttributeIndex = -1;
     double bestGain = MIN_GAIN_THRESHOLD; // Must exceed this threshold
@@ -344,7 +412,7 @@ std::shared_ptr<DTNode> DecisionTreeLearner::buildTree(
             bestAttributeIndex = attributeIndex;
         }
     }
-    
+
     // If no attribute provides sufficient information gain, return a leaf node
     if (bestAttributeIndex == -1)
     {
@@ -352,9 +420,7 @@ std::shared_ptr<DTNode> DecisionTreeLearner::buildTree(
     }
 
     // Create a new decision node
-    std::string attributeName = (bestAttributeIndex < attributeNames.size()) ? 
-                                attributeNames[bestAttributeIndex] : 
-                                "Attribute " + std::to_string(bestAttributeIndex);
+    std::string attributeName = (bestAttributeIndex < attributeNames.size()) ? attributeNames[bestAttributeIndex] : "Attribute " + std::to_string(bestAttributeIndex);
     auto node = std::make_shared<DTInternalNode>(bestAttributeIndex, attributeName);
 
     // Create a new list of attributes without the best attribute
@@ -383,7 +449,7 @@ std::shared_ptr<DTNode> DecisionTreeLearner::buildTree(
 
         // Add a minimum example threshold to avoid overfitting
         const int MIN_EXAMPLES_FOR_SPLIT = 3;
-        
+
         if (subExamples.size() < MIN_EXAMPLES_FOR_SPLIT)
         {
             // Too few examples for this value, use majority class from parent

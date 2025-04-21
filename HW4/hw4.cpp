@@ -5,7 +5,7 @@
  * Resources Used:
  * - SFML Official Tutorials: https://www.sfml-dev.org/learn.php
  * - Book: "Artificial Intelligence for Games" by Ian Millington
- * - Book: "Game AI Pro" edited by Steve Rabin
+ * - AI Tools: OpenAI's ChatGPT
  *
  * Author: Miles Hollifield
  * Date: 4/7/2025
@@ -57,53 +57,57 @@ Environment createIndoorEnvironment(int width, int height)
     // Create a large background room that encompasses the entire space
     env.addRoom(sf::FloatRect(30, 30, 580, 420));
 
-    // Add walls to define rooms with openings for doorways
-    // Reduced wall thickness from 10 to 5 units
-    // Made doorways wider by shortening walls
-
     // Top horizontal divider with doorway gap
-    env.addObstacle(sf::FloatRect(30, 170, 225, 5));  // Left section (shortened by 25)
-    env.addObstacle(sf::FloatRect(350, 170, 260, 5)); // Right section (moved right by 20)
+    env.addObstacle(sf::FloatRect(30, 170, 225, 5));  // Left section
+    env.addObstacle(sf::FloatRect(350, 170, 260, 5)); // Right section
 
     // Vertical divider with two doorway gaps
-    env.addObstacle(sf::FloatRect(330, 30, 5, 70));  // Top section (shortened by 20)
-    env.addObstacle(sf::FloatRect(330, 230, 5, 80)); // Middle section (moved down, shortened)
-    env.addObstacle(sf::FloatRect(330, 390, 5, 60)); // Bottom section (moved down, shortened)
+    env.addObstacle(sf::FloatRect(330, 30, 5, 70));  // Top section
+    env.addObstacle(sf::FloatRect(330, 230, 5, 80)); // Middle section
+    env.addObstacle(sf::FloatRect(330, 390, 5, 60)); // Bottom section
 
     // Left vertical divider with doorway
-    env.addObstacle(sf::FloatRect(170, 170, 5, 90));  // Upper section (shortened by 30)
-    env.addObstacle(sf::FloatRect(170, 350, 5, 100)); // Lower section (moved down, shortened)
+    env.addObstacle(sf::FloatRect(170, 170, 5, 90));  // Upper section
+    env.addObstacle(sf::FloatRect(170, 350, 5, 100)); // Lower section
 
     // Right vertical divider with doorway
-    env.addObstacle(sf::FloatRect(490, 170, 5, 90));  // Upper section (shortened by 30)
-    env.addObstacle(sf::FloatRect(490, 350, 5, 100)); // Lower section (moved down, shortened)
+    env.addObstacle(sf::FloatRect(490, 170, 5, 90));  // Upper section
+    env.addObstacle(sf::FloatRect(490, 350, 5, 100)); // Lower section
 
     // Bottom horizontal divider with doorway gaps
-    env.addObstacle(sf::FloatRect(30, 330, 70, 5)); // Left section (shortened by 20)
+    env.addObstacle(sf::FloatRect(30, 330, 70, 5)); // Left section
     // Removed middle sections as you did
-    env.addObstacle(sf::FloatRect(540, 330, 70, 5)); // Right section (moved right, shortened)
+    env.addObstacle(sf::FloatRect(540, 330, 70, 5)); // Right section
 
-    // Add obstacles within rooms - made smaller
+    // Add obstacles within rooms
 
     // Top-right room obstacles
-    //env.addObstacle(sf::FloatRect(410, 80, 20, 30)); // Reduced from 30x40
+    // env.addObstacle(sf::FloatRect(410, 80, 20, 30));
 
     // Middle-left room obstacles
-    env.addObstacle(sf::FloatRect(80, 240, 30, 20)); // Reduced from 40x30
+    env.addObstacle(sf::FloatRect(80, 240, 30, 20));
 
     // Middle-center room obstacles
-    env.addObstacle(sf::FloatRect(260, 240, 20, 35)); // Reduced from 30x50
+    env.addObstacle(sf::FloatRect(260, 240, 20, 35));
 
     // Bottom row room obstacles
-    env.addObstacle(sf::FloatRect(120, 380, 20, 20)); // Reduced from 30x30
-    env.addObstacle(sf::FloatRect(270, 380, 20, 25)); // Reduced from 25x35
-    env.addObstacle(sf::FloatRect(530, 380, 30, 20)); // Reduced from 40x25
+    env.addObstacle(sf::FloatRect(120, 380, 20, 20));
+    env.addObstacle(sf::FloatRect(270, 380, 20, 25));
+    env.addObstacle(sf::FloatRect(530, 380, 30, 20));
 
     return env;
 }
 
 /**
  * @brief Main function
+ * @return Exit status
+ * OpenAI's ChatGPT was used to assist in implementing the main function.
+ * The following prompt was used:
+ * "Create a main function for a C++ SFML application that initializes a window, loads textures,
+ * creates an environment, and sets up a player and monsters with behavior trees and decision trees.
+ * Include event handling for player movement and monster behavior control."
+ * The code provided by ChatGPT was modified to fit the context of the project and to include
+ * additional features such as decision tree learning and behavior tree recording.
  */
 int main()
 {
@@ -135,13 +139,13 @@ int main()
     sf::Vector2f playerStartPos(100, 100);
     PathFollower player(playerStartPos, agentTexture);
 
-    // Create behavior tree monster - position in bottom-left room instead of bottom-right (which had an obstacle)
+    // Create behavior tree monster
     sf::Vector2f monsterStartPos(400, 400);
     Monster behaviorTreeMonster(monsterStartPos, agentTexture, environment, environmentGraph, sf::Color::Red);
     behaviorTreeMonster.setPlayerKinematic(player.getKinematic());
     behaviorTreeMonster.setControlType(Monster::ControlType::BEHAVIOR_TREE);
 
-    // Create learned decision tree monster - position in top-right room (adjusted to avoid obstacle)
+    // Create learned decision tree monster
     sf::Vector2f learnerStartPos(450, 140);
     Monster decisionTreeMonster(learnerStartPos, agentTexture, environment, environmentGraph, sf::Color::Blue);
     decisionTreeMonster.setPlayerKinematic(player.getKinematic());
@@ -165,11 +169,21 @@ int main()
     {
         instructionText.setFont(font);
         instructionText.setString(
-            "Left-click: Set player destination | R: Reset positions\n"
-            "1: Record behavior tree data | 2: Learn decision tree | 3: Toggle monsters");
+            "Left-click: Set player destination |\n" 
+            "R: Reset positions |\n"
+            "1: Record behavior tree data |\n"
+             "2: Learn decision tree |\n"
+             "3: Toggle monsters");
         instructionText.setCharacterSize(14);
         instructionText.setFillColor(sf::Color::Black);
-        instructionText.setPosition(10, 10);
+        
+        sf::RectangleShape instructionBackground;
+        instructionBackground.setSize(sf::Vector2f(windowWidth - 20, 50));
+        instructionBackground.setPosition(10, 10);
+        instructionBackground.setFillColor(sf::Color(240, 240, 240, 200));
+        
+        sf::FloatRect textBounds = instructionText.getLocalBounds();
+        instructionText.setPosition(350, 50); 
     }
 
     // Text for status
@@ -179,7 +193,13 @@ int main()
         statusText.setFont(font);
         statusText.setCharacterSize(14);
         statusText.setFillColor(sf::Color::Black);
-        statusText.setPosition(10, windowHeight - 30);
+        
+        sf::RectangleShape statusBackground;
+        statusBackground.setSize(sf::Vector2f(windowWidth - 20, 30));
+        statusBackground.setPosition(10, windowHeight - 40);
+        statusBackground.setFillColor(sf::Color(240, 240, 240, 200));
+        
+        statusText.setPosition(windowWidth / 2 - 100, windowHeight - 25);
         statusText.setString("Click somewhere to move");
     }
 
@@ -477,22 +497,33 @@ int main()
             performanceText.setFont(font);
             performanceText.setCharacterSize(12);
             performanceText.setFillColor(sf::Color::Black);
-            performanceText.setPosition(windowWidth - 300, 10);
 
             std::string btStats = "Behavior Tree: " + std::to_string(behaviorTreeCatches) + " catches";
             std::string dtStats = "Decision Tree: " + std::to_string(decisionTreeCatches) + " catches";
 
             if (behaviorTreeCatches > 0)
             {
-                btStats += " (avg " + std::to_string(behaviorTreeTime / behaviorTreeCatches) + " seconds)";
+                // Format to 3 decimal places
+                float avgTime = behaviorTreeTime / behaviorTreeCatches;
+                char buffer[64];
+                sprintf(buffer, "%.3f", avgTime);
+                btStats += " (avg " + std::string(buffer) + " seconds)";
             }
 
             if (decisionTreeCatches > 0)
             {
-                dtStats += " (avg " + std::to_string(decisionTreeTime / decisionTreeCatches) + " seconds)";
+                // Format to 3 decimal places
+                float avgTime = decisionTreeTime / decisionTreeCatches;
+                char buffer[64];
+                sprintf(buffer, "%.3f", avgTime);
+                dtStats += " (avg " + std::string(buffer) + " seconds)";
             }
 
             performanceText.setString(btStats + "\n" + dtStats);
+
+            sf::FloatRect textBounds = performanceText.getLocalBounds();
+            performanceText.setPosition(35, 50);
+
             window.draw(performanceText);
         }
 
@@ -517,6 +548,13 @@ int main()
 
 /**
  * @brief Create a behavior tree for the monster
+ * @param monster Reference to the monster
+ * @return Shared pointer to the created behavior tree
+ * OpenAI's ChatGPT was used to assist in implementing this function.
+ * The following prompt was used:
+ * "Create a behavior tree for a monster that includes actions like pathfinding to the player,
+ * wandering, fleeing, and dancing. Use C++ and SFML for the implementation."
+ * The code provided by ChatGPT was modified to fit the context of the project.
  */
 std::shared_ptr<BehaviorTree> createMonsterBehaviorTree(Monster &monster)
 {
@@ -764,7 +802,7 @@ std::shared_ptr<BehaviorTree> createMonsterBehaviorTree(Monster &monster)
 
     // Main selector - prioritize actions
     auto rootSelector = std::make_shared<SelectorNode>("Root Selector");
-    rootSelector->addChild(fleeSequence);  // First priority: flee from obstacles when moving fast
+    rootSelector->addChild(fleeSequence);  // First priority: flee from obstacles
     rootSelector->addChild(chaseSequence); // Second priority: chase player if visible
     rootSelector->addChild(danceSequence); // Third priority: occasionally dance
     rootSelector->addChild(wanderAction);  // Last resort: wander around
@@ -782,16 +820,16 @@ std::shared_ptr<EnvironmentState> Monster::createEnvironmentState()
 {
     // Create a new environment state for this monster
     auto state = std::make_shared<EnvironmentState>(monsterKinematic, environment);
-    
+
     // If we have a player kinematic, set it as the target for the state
     if (playerKinematic)
     {
         state->setTarget(playerKinematic->position);
     }
-    
+
     // Update the state to reflect current conditions
     state->update();
-    
+
     return state;
 }
 

@@ -4,7 +4,13 @@
  *
  * Resources Used:
  * - Book: "Artificial Intelligence for Games" by Ian Millington
- * - Book: "Game AI Pro" edited by Steve Rabin
+ * - AI Tools: OpenAI's ChatGPT
+ *
+ * OpenAI's ChatGPT was used to suggest a template header file for Monster's
+ * implementation. The following prompt was used: "Create a template header file
+ * for a monster class in C++ that includes properties for position, velocity, orientation,
+ * and methods for movement and behavior control."
+ * The code provided by ChatGPT was modified to fit the context of the project.
  *
  * Author: Miles Hollifield
  * Date: 4/7/2025
@@ -186,7 +192,7 @@ public:
      * @return String representation of the current action
      */
     std::string getCurrentAction() const { return currentAction; }
-    
+
     /**
      * @brief Create an environment state for this monster
      * @return Shared pointer to an environment state object
@@ -248,7 +254,7 @@ private:
     int breadcrumbCounter;
     sf::Color breadcrumbColor;
     static constexpr int BREADCRUMB_INTERVAL = 120; // More frequent breadcrumbs than before
-    static constexpr int MAX_BREADCRUMBS = 30; // Store more breadcrumbs
+    static constexpr int MAX_BREADCRUMBS = 30;      // Store more breadcrumbs
     void dropBreadcrumb();
 };
 

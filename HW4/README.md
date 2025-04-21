@@ -9,17 +9,13 @@ This project demonstrates the implementation of decision trees, behavior trees, 
 - **Decision Tree Learning**: Learning decision trees from behavior data
 - **Comparative Analysis**: Tools to compare the effectiveness of the different approaches
 
-## Requirements
-- C++17 compatible compiler
-- SFML 2.5 or higher
-- Linux or macOS
-
 ## Project Structure
 - `headers/` - Header files
   - `DecisionTree.h` - Decision tree implementation
   - `BehaviorTree.h` - Behavior tree implementation
   - `Monster.h` - Monster entity controlled by AI
   - `DTLearning.h` - Decision tree learning algorithm
+  - `LearnedDecisionTree.h` - Implementation of a decision tree based on learned data
   - Various headers from HW2 and HW3
 - `source/` - Source files
   - `DecisionTree.cpp`
@@ -32,7 +28,7 @@ This project demonstrates the implementation of decision trees, behavior trees, 
 
 ## Building the Project
 To build the project, run:
-```bash
+```
 make
 ```
 
@@ -40,7 +36,7 @@ This will compile all source files and create the executable `hw4`.
 
 ## Running the Project
 To run the project, execute:
-```bash
+```
 ./hw4
 ```
 
@@ -70,15 +66,17 @@ Actions controlled by the decision tree include:
 
 ### Behavior Tree
 The behavior tree implementation includes several node types:
-- **Sequence**: Executes children in order until one fails
-- **Selector**: Tries children in order until one succeeds
-- **Inverter**: Inverts the result of its child
-- **Repeater**: Repeats its child a specified number of times
-- **Parallel**: Executes all children simultaneously
+
+- **Sequence Nodes:** Execute children in order until one fails (AND logic)
+- **Selector Nodes:** Try children in order until one succeeds (OR logic)
+- **Decorator Nodes:** Modify the behavior of their child nodes (Inverter, Repeater)
+- **Random Selector:** Randomly selects a child to execute
+- **Parallel Nodes:** Execute all children simultaneously
 
 The monster's behavior tree includes logic for:
 - Chasing the player when visible
 - Wandering when no other actions are available
+- Fleeing from obstacles
 - Occasionally performing a dance
 
 ### Decision Tree Learning

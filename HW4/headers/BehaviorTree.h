@@ -4,8 +4,12 @@
  *
  * Resources Used:
  * - Book: "Artificial Intelligence for Games" by Ian Millington
- * - Book: "Game AI Pro" edited by Steve Rabin
- * - Book: "Behavior Trees in Robotics and AI" by Michele Colledanchise and Petter Ögren
+ * - AI Tools: OpenAI's ChatGPT
+ *
+ * OpenAI's ChatGPT was used to suggest a template header file for BehaviorTree's
+ * implementation. The following prompt was used: "Create a template header file
+ * for a behavior tree in C++ that includes nodes for actions, conditions, sequences, and selectors."
+ * The code provided by ChatGPT was modified to fit the context of the project.
  *
  * Author: Miles Hollifield
  * Date: 4/7/2025
@@ -46,6 +50,9 @@ struct BehaviorState
     std::unordered_map<std::string, int> intParams;
     std::unordered_map<std::string, bool> boolParams;
 
+    /**
+     * @brief Resets all state variables to their default values.
+     */
     void reset()
     {
         initialized = false;
@@ -69,7 +76,6 @@ public:
 
     /**
      * @brief Pure virtual function to tick/update the node
-     * @return Status of execution
      */
     virtual BehaviorStatus tick() = 0;
 
@@ -79,7 +85,7 @@ public:
     virtual void reset() = 0;
 
     /**
-     * @brief Get the name of this node (for debugging)
+     * @brief Get the name of this node
      */
     std::string getName() const { return nodeName; }
 
@@ -97,7 +103,7 @@ public:
     /**
      * @brief Constructor for action node
      * @param action Function that performs the action and returns status
-     * @param name Name of the action (for debugging)
+     * @param name Name of the action
      */
     BehaviorActionNode(std::function<BehaviorStatus()> action, const std::string &name)
         : action(action)
@@ -136,7 +142,7 @@ public:
     /**
      * @brief Constructor for condition node
      * @param condition Function that checks a condition
-     * @param name Name of the condition (for debugging)
+     * @param name Name of the condition
      */
     ConditionNode(std::function<bool()> condition, const std::string &name)
         : condition(condition)
@@ -174,7 +180,7 @@ class SequenceNode : public BehaviorNode
 public:
     /**
      * @brief Constructor for sequence node
-     * @param name Name of the sequence (for debugging)
+     * @param name Name of the sequence
      */
     SequenceNode(const std::string &name = "Sequence")
     {
@@ -216,7 +222,7 @@ class SelectorNode : public BehaviorNode
 public:
     /**
      * @brief Constructor for selector node
-     * @param name Name of the selector (for debugging)
+     * @param name Name of the selector
      */
     SelectorNode(const std::string &name = "Selector")
     {
@@ -259,7 +265,7 @@ public:
     /**
      * @brief Constructor for decorator node
      * @param child Child node to decorate
-     * @param name Name of the decorator (for debugging)
+     * @param name Name of the decorator
      */
     DecoratorNode(std::shared_ptr<BehaviorNode> child, const std::string &name)
         : child(child)
@@ -344,7 +350,7 @@ class RandomSelectorNode : public BehaviorNode
 public:
     /**
      * @brief Constructor for random selector node
-     * @param name Name of the random selector (for debugging)
+     * @param name Name of the random selector
      */
     RandomSelectorNode(const std::string &name = "Random Selector")
     {
@@ -388,7 +394,7 @@ public:
      * @brief Constructor for parallel node
      * @param successPolicy How many children need to succeed for the node to succeed
      * @param failurePolicy How many children need to fail for the node to fail
-     * @param name Name of the parallel node (for debugging)
+     * @param name Name of the parallel node
      */
     ParallelNode(int successPolicy, int failurePolicy, const std::string &name = "Parallel")
         : successPolicy(successPolicy), failurePolicy(failurePolicy)
