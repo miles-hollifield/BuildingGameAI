@@ -101,13 +101,10 @@ Environment createIndoorEnvironment(int width, int height)
 /**
  * @brief Main function
  * @return Exit status
- * OpenAI's ChatGPT was used to assist in implementing the main function.
- * The following prompt was used:
- * "Create a main function for a C++ SFML application that initializes a window, loads textures,
- * creates an environment, and sets up a player and monsters with behavior trees and decision trees.
- * Include event handling for player movement and monster behavior control."
- * The code provided by ChatGPT was modified to fit the context of the project and to include
- * additional features such as decision tree learning and behavior tree recording.
+ * OpenAI's ChatGPT was used to assist in creating the main function structure.
+ * The following prompt was used: "Create the main function for a C++ SFML application that
+ * initializes a window, loads textures, creates an environment, and sets up agents with decision trees and behavior trees."
+ * The code provided by ChatGPT was modified to fit the context of the project.
  */
 int main()
 {
@@ -169,38 +166,41 @@ int main()
     {
         instructionText.setFont(font);
         instructionText.setString(
-            "Left-click: Set player destination |\n" 
             "R: Reset positions |\n"
             "1: Record behavior tree data |\n"
-             "2: Learn decision tree |\n"
-             "3: Toggle monsters");
+            "2: Learn decision tree |\n"
+            "3: Toggle monsters |");
         instructionText.setCharacterSize(14);
         instructionText.setFillColor(sf::Color::Black);
-        
-        sf::RectangleShape instructionBackground;
-        instructionBackground.setSize(sf::Vector2f(windowWidth - 20, 50));
-        instructionBackground.setPosition(10, 10);
-        instructionBackground.setFillColor(sf::Color(240, 240, 240, 200));
-        
+
         sf::FloatRect textBounds = instructionText.getLocalBounds();
-        instructionText.setPosition(350, 50); 
+        instructionText.setPosition(350, 50);
     }
 
     // Text for status
-    sf::Text statusText;
+    sf::Text playerStatusText;
+    sf::Text recordStatusText;
     if (fontLoaded)
     {
-        statusText.setFont(font);
-        statusText.setCharacterSize(14);
-        statusText.setFillColor(sf::Color::Black);
-        
+        // Player status text (left side)
+        playerStatusText.setFont(font);
+        playerStatusText.setCharacterSize(14);
+        playerStatusText.setFillColor(sf::Color::Black);
+        playerStatusText.setPosition(20, windowHeight - 25);
+        playerStatusText.setString("Player using decision tree");
+
+        // Record status text (right side)
+        recordStatusText.setFont(font);
+        recordStatusText.setCharacterSize(14);
+        recordStatusText.setFillColor(sf::Color::Black);
+        recordStatusText.setPosition(windowWidth - 300, windowHeight - 25);
+        recordStatusText.setString("Press 1 to start recording data");
+
+        // Status background
         sf::RectangleShape statusBackground;
         statusBackground.setSize(sf::Vector2f(windowWidth - 20, 30));
         statusBackground.setPosition(10, windowHeight - 40);
         statusBackground.setFillColor(sf::Color(240, 240, 240, 200));
-        
-        statusText.setPosition(windowWidth / 2 - 100, windowHeight - 25);
-        statusText.setString("Click somewhere to move");
     }
 
     // Set up decision tree for the player
@@ -220,6 +220,17 @@ int main()
     int decisionTreeCatches = 0;
     float behaviorTreeTime = 0;
     float decisionTreeTime = 0;
+
+    // Variables for player decision tree
+    float playerDecisionTimer = 0.0f;
+    const float DECISION_INTERVAL = 2.0f; // Make decisions every 2 seconds
+    std::vector<sf::Vector2f> potentialTargets = {
+        {100, 100}, // Top-left room
+        {500, 100}, // Top-right room
+        {100, 350}, // Bottom-left room
+        {500, 350}, // Bottom-right room
+        {250, 250}  // Center
+    };
 
     // Clock for timing
     sf::Clock gameClock;
@@ -263,7 +274,8 @@ int main()
 
                     if (fontLoaded)
                     {
-                        statusText.setString("Positions reset");
+                        playerStatusText.setString("Positions reset");
+                        recordStatusText.setString("Stats reset");
                     }
                 }
                 else if (event.key.code == sf::Keyboard::Num1)
@@ -283,7 +295,7 @@ int main()
 
                         if (fontLoaded)
                         {
-                            statusText.setString("Recording behavior tree data...");
+                            recordStatusText.setString("Recording behavior tree data...");
                         }
                     }
                     else
@@ -293,7 +305,9 @@ int main()
 
                         if (fontLoaded)
                         {
-                            statusText.setString("Recording stopped");
+                            recordStatusText.setString("Recording stopped - " +
+                                                       std::to_string(recordingFrames) +
+                                                       " frames collected");
                         }
                     }
                 }
@@ -308,14 +322,14 @@ int main()
 
                         if (fontLoaded)
                         {
-                            statusText.setString("Decision tree learned and applied");
+                            recordStatusText.setString("Decision tree learned and applied");
                         }
                     }
                     else
                     {
                         if (fontLoaded)
                         {
-                            statusText.setString("Failed to learn decision tree");
+                            recordStatusText.setString("Failed to learn decision tree");
                         }
                     }
                 }
@@ -328,7 +342,7 @@ int main()
                         showDecisionTreeMonster = true;
                         if (fontLoaded)
                         {
-                            statusText.setString("Showing learned decision tree monster");
+                            recordStatusText.setString("Showing learned decision tree monster");
                         }
                     }
                     else if (!showBehaviorTreeMonster && showDecisionTreeMonster)
@@ -337,7 +351,7 @@ int main()
                         showDecisionTreeMonster = true;
                         if (fontLoaded)
                         {
-                            statusText.setString("Showing both monsters");
+                            recordStatusText.setString("Showing both monsters");
                         }
                     }
                     else
@@ -346,33 +360,57 @@ int main()
                         showDecisionTreeMonster = false;
                         if (fontLoaded)
                         {
-                            statusText.setString("Showing behavior tree monster");
+                            recordStatusText.setString("Showing behavior tree monster");
                         }
                     }
                 }
             }
-            else if (event.type == sf::Event::MouseButtonPressed)
-            {
-                if (event.mouseButton.button == sf::Mouse::Left)
-                {
-                    // Get mouse position
-                    sf::Vector2f mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window));
+        }
 
-                    // Check if the position is valid
-                    if (!environment.isObstacle(mousePos))
+        // Calculate delta time
+        float deltaTime = gameClock.restart().asSeconds();
+
+        // Update player state
+        playerState.update();
+
+        // Update player decision timer
+        playerDecisionTimer += deltaTime;
+
+        // Make player decisions based on the decision tree
+        if (playerDecisionTimer >= DECISION_INTERVAL || player.pathCompleted())
+        {
+            playerDecisionTimer = 0.0f;
+
+            // Make a decision based on the decision tree
+            std::string decision = playerDecisionTree->makeDecision();
+
+            // Process the decision
+            if (decision.find("PathfindTo") != std::string::npos)
+            {
+                // Extract target from decision
+                size_t startPos = decision.find("_");
+                if (startPos != std::string::npos)
+                {
+                    std::string targetStr = decision.substr(startPos + 1);
+                    size_t separatorPos = targetStr.find("_");
+                    if (separatorPos != std::string::npos)
                     {
-                        // Find path to mouse position
+                        float x = std::stof(targetStr.substr(0, separatorPos));
+                        float y = std::stof(targetStr.substr(separatorPos + 1));
+                        sf::Vector2f targetPos(x, y);
+
+                        // Find path to target position
                         int startVertex = environment.pointToVertex(player.getPosition());
-                        int goalVertex = environment.pointToVertex(mousePos);
+                        int goalVertex = environment.pointToVertex(targetPos);
 
                         // Use A* to find a path
                         AStar astar([](int current, int goal, const Graph &g)
                                     {
-                              sf::Vector2f currentPos = g.getVertexPosition(current);
-                              sf::Vector2f goalPos = g.getVertexPosition(goal);
-                              float dx = goalPos.x - currentPos.x;
-                              float dy = goalPos.y - currentPos.y;
-                              return std::sqrt(dx * dx + dy * dy); });
+                            sf::Vector2f currentPos = g.getVertexPosition(current);
+                            sf::Vector2f goalPos = g.getVertexPosition(goal);
+                            float dx = goalPos.x - currentPos.x;
+                            float dy = goalPos.y - currentPos.y;
+                            return std::sqrt(dx * dx + dy * dy); });
 
                         std::vector<int> path = astar.findPath(environmentGraph, startVertex, goalVertex);
 
@@ -388,28 +426,191 @@ int main()
 
                         if (fontLoaded)
                         {
-                            statusText.setString("Moving to new position");
-                        }
-                    }
-                    else
-                    {
-                        if (fontLoaded)
-                        {
-                            statusText.setString("Cannot move to obstacle");
+                            playerStatusText.setString("Player: Moving to position (" +
+                                                       std::to_string(int(x)) + "," +
+                                                       std::to_string(int(y)) + ")");
                         }
                     }
                 }
             }
-        }
+            else if (decision == "Wander")
+            {
+                // Generate a random position within environment bounds
+                std::random_device rd;
+                std::mt19937 gen(rd());
+                std::uniform_int_distribution<> distribX(50, windowWidth - 50);
+                std::uniform_int_distribution<> distribY(50, windowHeight - 50);
 
-        // Calculate delta time
-        float deltaTime = gameClock.restart().asSeconds();
+                sf::Vector2f randomTarget;
+                bool validTarget = false;
+
+                // Try to find a valid random position
+                for (int attempt = 0; attempt < 10 && !validTarget; attempt++)
+                {
+                    randomTarget.x = distribX(gen);
+                    randomTarget.y = distribY(gen);
+                    if (!environment.isObstacle(randomTarget))
+                    {
+                        validTarget = true;
+                    }
+                }
+
+                if (validTarget)
+                {
+                    // Find path to random position
+                    int startVertex = environment.pointToVertex(player.getPosition());
+                    int goalVertex = environment.pointToVertex(randomTarget);
+
+                    AStar astar([](int current, int goal, const Graph &g)
+                                {
+                        sf::Vector2f currentPos = g.getVertexPosition(current);
+                        sf::Vector2f goalPos = g.getVertexPosition(goal);
+                        float dx = goalPos.x - currentPos.x;
+                        float dy = goalPos.y - currentPos.y;
+                        return std::sqrt(dx * dx + dy * dy); });
+
+                    std::vector<int> path = astar.findPath(environmentGraph, startVertex, goalVertex);
+
+                    // Convert path to waypoints
+                    std::vector<sf::Vector2f> waypoints;
+                    for (int vertex : path)
+                    {
+                        waypoints.push_back(environmentGraph.getVertexPosition(vertex));
+                    }
+
+                    // Set the path for the player to follow
+                    player.setPath(waypoints);
+
+                    if (fontLoaded)
+                    {
+                        playerStatusText.setString("Player: Wandering to random location (" +
+                                                   std::to_string(int(randomTarget.x)) + "," +
+                                                   std::to_string(int(randomTarget.y)) + ")");
+                    }
+                }
+            }
+            else if (decision == "Flee")
+            {
+                // Determine flee direction (away from nearest obstacle)
+                float nearestObstacleDistance = 1000.0f;
+                sf::Vector2f fleeDirection(0, 0);
+
+                // Check in 8 directions for obstacles
+                for (int angle = 0; angle < 360; angle += 45)
+                {
+                    float radian = angle * 3.14159f / 180.0f;
+                    float dx = std::cos(radian);
+                    float dy = std::sin(radian);
+
+                    // Check for obstacles
+                    for (float dist = 10.0f; dist <= 50.0f; dist += 10.0f)
+                    {
+                        sf::Vector2f checkPoint = player.getPosition() + sf::Vector2f(dx * dist, dy * dist);
+                        if (environment.isObstacle(checkPoint))
+                        {
+                            if (dist < nearestObstacleDistance)
+                            {
+                                nearestObstacleDistance = dist;
+                                fleeDirection = sf::Vector2f(-dx, -dy); // Opposite direction
+                            }
+                            break;
+                        }
+                    }
+                }
+
+                if (nearestObstacleDistance < 1000.0f)
+                {
+                    // Scale the flee direction to get a reasonable distance
+                    sf::Vector2f fleeTarget = player.getPosition() + fleeDirection * 100.0f;
+
+                    // Ensure the flee target is within environment bounds
+                    fleeTarget.x = std::max(50.0f, std::min(windowWidth - 50.0f, fleeTarget.x));
+                    fleeTarget.y = std::max(50.0f, std::min(windowHeight - 50.0f, fleeTarget.y));
+
+                    // Find path to flee target
+                    int startVertex = environment.pointToVertex(player.getPosition());
+                    int goalVertex = environment.pointToVertex(fleeTarget);
+
+                    AStar astar([](int current, int goal, const Graph &g)
+                                {
+                        sf::Vector2f currentPos = g.getVertexPosition(current);
+                        sf::Vector2f goalPos = g.getVertexPosition(goal);
+                        float dx = goalPos.x - currentPos.x;
+                        float dy = goalPos.y - currentPos.y;
+                        return std::sqrt(dx * dx + dy * dy); });
+
+                    std::vector<int> path = astar.findPath(environmentGraph, startVertex, goalVertex);
+
+                    // Convert path to waypoints
+                    std::vector<sf::Vector2f> waypoints;
+                    for (int vertex : path)
+                    {
+                        waypoints.push_back(environmentGraph.getVertexPosition(vertex));
+                    }
+
+                    // Set the path for the player to follow
+                    player.setPath(waypoints);
+
+                    if (fontLoaded)
+                    {
+                        playerStatusText.setString("Player: Fleeing from obstacle at " +
+                                                   std::to_string(int(nearestObstacleDistance)) +
+                                                   " pixels away");
+                    }
+                }
+            }
+            else if (decision == "Dance")
+            {
+                player.setPath({}); // Clear current path
+
+                if (fontLoaded)
+                {
+                    playerStatusText.setString("Player: Dancing");
+                }
+            }
+            else
+            {
+                // Default to selecting a random target from the predefined list
+                std::random_device rd;
+                std::mt19937 gen(rd());
+                std::uniform_int_distribution<> distrib(0, potentialTargets.size() - 1);
+                sf::Vector2f target = potentialTargets[distrib(gen)];
+
+                // Find path to target
+                int startVertex = environment.pointToVertex(player.getPosition());
+                int goalVertex = environment.pointToVertex(target);
+
+                AStar astar([](int current, int goal, const Graph &g)
+                            {
+                    sf::Vector2f currentPos = g.getVertexPosition(current);
+                    sf::Vector2f goalPos = g.getVertexPosition(goal);
+                    float dx = goalPos.x - currentPos.x;
+                    float dy = goalPos.y - currentPos.y;
+                    return std::sqrt(dx * dx + dy * dy); });
+
+                std::vector<int> path = astar.findPath(environmentGraph, startVertex, goalVertex);
+
+                // Convert path to waypoints
+                std::vector<sf::Vector2f> waypoints;
+                for (int vertex : path)
+                {
+                    waypoints.push_back(environmentGraph.getVertexPosition(vertex));
+                }
+
+                // Set the path for the player to follow
+                player.setPath(waypoints);
+
+                if (fontLoaded)
+                {
+                    playerStatusText.setString("Player: Moving to random target (" +
+                                               std::to_string(int(target.x)) + "," +
+                                               std::to_string(int(target.y)) + ")");
+                }
+            }
+        }
 
         // Update player
         player.update(deltaTime);
-
-        // Update environment state for player
-        playerState.update();
 
         // Update monsters
         bool behaviorTreeCaught = false;
@@ -428,7 +629,7 @@ int main()
 
                 if (fontLoaded)
                 {
-                    statusText.setString("Caught by behavior tree monster!");
+                    playerStatusText.setString("Player caught by behavior tree monster!");
                 }
             }
         }
@@ -446,7 +647,7 @@ int main()
 
                 if (fontLoaded)
                 {
-                    statusText.setString("Caught by decision tree monster!");
+                    playerStatusText.setString("Player caught by decision tree monster!");
                 }
             }
         }
@@ -465,7 +666,7 @@ int main()
 
                 if (fontLoaded)
                 {
-                    statusText.setString("Recording complete (10000 frames)");
+                    recordStatusText.setString("Recording complete (10000 frames)");
                 }
             }
         }
@@ -531,7 +732,8 @@ int main()
         if (fontLoaded)
         {
             window.draw(instructionText);
-            window.draw(statusText);
+            window.draw(playerStatusText);
+            window.draw(recordStatusText);
         }
 
         window.display();
@@ -835,6 +1037,7 @@ std::shared_ptr<EnvironmentState> Monster::createEnvironmentState()
 
 /**
  * @brief Create a decision tree for the player character
+ * This function implements a more complex decision tree for the player's autonomous movement
  */
 std::shared_ptr<DecisionTree> createCharacterDecisionTree(EnvironmentState &state, Environment &environment)
 {
@@ -849,10 +1052,148 @@ std::shared_ptr<DecisionTree> createCharacterDecisionTree(EnvironmentState &stat
         {250, 250}  // Center
     };
 
-    // Build a complex decision tree
-    decisionTree->buildComplexTree(potentialTargets);
+    // Define conditions for decision making
+    auto isNearObstacle = [&state]() -> bool
+    {
+        return state.isNearObstacle(40.0f);
+    };
 
-    // Log that the decision tree was created
+    auto isMovingFast = [&state]() -> bool
+    {
+        return state.isMovingFast(120.0f);
+    };
+
+    auto isIdleTooLong = [&state]() -> bool
+    {
+        return state.isIdleForTooLong(3.0f);
+    };
+
+    auto shouldChangeTarget = [&state]() -> bool
+    {
+        return state.shouldChangeTarget();
+    };
+
+    auto isInTopLeftRoom = [&state]() -> bool
+    {
+        return state.isInRoom(0);
+    };
+
+    auto isInTopRightRoom = [&state]() -> bool
+    {
+        return state.isInRoom(1);
+    };
+
+    auto isInBottomLeftRoom = [&state]() -> bool
+    {
+        return state.isInRoom(2);
+    };
+
+    auto isInBottomRightRoom = [&state]() -> bool
+    {
+        return state.isInRoom(3);
+    };
+
+    auto shouldDance = [&state]() -> bool
+    {
+        // 2% chance to dance when we're deciding what to do
+        return (rand() % 100) < 2;
+    };
+
+    // Create action nodes for different targets
+    auto pathfindToTopLeft = std::make_shared<ActionNode>("PathfindTo_100_100");
+    auto pathfindToTopRight = std::make_shared<ActionNode>("PathfindTo_500_100");
+    auto pathfindToBottomLeft = std::make_shared<ActionNode>("PathfindTo_100_350");
+    auto pathfindToBottomRight = std::make_shared<ActionNode>("PathfindTo_500_350");
+    auto pathfindToCenter = std::make_shared<ActionNode>("PathfindTo_250_250");
+    auto wanderAction = std::make_shared<ActionNode>("Wander");
+    auto fleeAction = std::make_shared<ActionNode>("Flee");
+    auto danceAction = std::make_shared<ActionNode>("Dance");
+
+    // Create a random decision node for target selection
+    auto randomTargetNode1 = std::make_shared<RandomDecisionNode>("Choose New Target 1");
+    randomTargetNode1->addChild(pathfindToTopRight, 10.0f);
+    randomTargetNode1->addChild(pathfindToBottomLeft, 10.0f);
+    randomTargetNode1->addChild(pathfindToCenter, 5.0f);
+
+    auto randomTargetNode2 = std::make_shared<RandomDecisionNode>("Choose New Target 2");
+    randomTargetNode2->addChild(pathfindToTopLeft, 10.0f);
+    randomTargetNode2->addChild(pathfindToBottomRight, 10.0f);
+    randomTargetNode2->addChild(pathfindToCenter, 5.0f);
+
+    auto randomTargetNode3 = std::make_shared<RandomDecisionNode>("Choose New Target 3");
+    randomTargetNode3->addChild(pathfindToTopLeft, 10.0f);
+    randomTargetNode3->addChild(pathfindToBottomRight, 10.0f);
+    randomTargetNode3->addChild(pathfindToCenter, 5.0f);
+
+    auto randomTargetNode4 = std::make_shared<RandomDecisionNode>("Choose New Target 4");
+    randomTargetNode4->addChild(pathfindToTopRight, 10.0f);
+    randomTargetNode4->addChild(pathfindToBottomLeft, 10.0f);
+    randomTargetNode4->addChild(pathfindToCenter, 5.0f);
+
+    // Target selection subtree based on current room
+    auto targetSelectionNode = std::make_shared<DecisionBranch>(
+        isInTopLeftRoom,
+        std::make_shared<DecisionBranch>(
+            shouldChangeTarget,
+            randomTargetNode1,
+            pathfindToTopLeft,
+            "Should change target in top-left room?"),
+        std::make_shared<DecisionBranch>(
+            isInTopRightRoom,
+            std::make_shared<DecisionBranch>(
+                shouldChangeTarget,
+                randomTargetNode2,
+                pathfindToTopRight,
+                "Should change target in top-right room?"),
+            std::make_shared<DecisionBranch>(
+                isInBottomLeftRoom,
+                std::make_shared<DecisionBranch>(
+                    shouldChangeTarget,
+                    randomTargetNode3,
+                    pathfindToBottomLeft,
+                    "Should change target in bottom-left room?"),
+                std::make_shared<DecisionBranch>(
+                    isInBottomRightRoom,
+                    std::make_shared<DecisionBranch>(
+                        shouldChangeTarget,
+                        randomTargetNode4,
+                        pathfindToBottomRight,
+                        "Should change target in bottom-right room?"),
+                    pathfindToCenter, // Default if not in any specific room
+                    "In bottom-right room?"),
+                "In bottom-left room?"),
+            "In top-right room?"),
+        "In top-left room?");
+
+    // Special behavior branch
+    auto specialBehaviorNode = std::make_shared<DecisionBranch>(
+        shouldDance,
+        danceAction,
+        targetSelectionNode,
+        "Should dance?");
+
+    // Movement safety branch
+    auto safetyNode = std::make_shared<DecisionBranch>(
+        isNearObstacle,
+        fleeAction,
+        specialBehaviorNode,
+        "Near obstacle?");
+
+    // Main decision branch
+    auto rootNode = std::make_shared<DecisionBranch>(
+        isMovingFast,
+        safetyNode,
+        std::make_shared<DecisionBranch>(
+            isIdleTooLong,
+            wanderAction,
+            targetSelectionNode,
+            "Idle too long?"),
+        "Moving fast?");
+
+    // Set the root node
+    decisionTree->setRootNode(rootNode);
+
+    // Log tree creation
     std::cout << "Created decision tree for character" << std::endl;
 
     return decisionTree;
