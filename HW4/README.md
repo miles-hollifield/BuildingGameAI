@@ -40,6 +40,12 @@ To run the project, execute:
 ./hw4
 ```
 
+## **Cleanup**
+To clean the project, run this command:
+```
+make clean
+```
+
 ## Controls
 - **Left-click**: Set player destination
 - **R**: Reset positions
