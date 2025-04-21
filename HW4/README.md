@@ -1,95 +1,36 @@
 # CSC 584/484 Homework 4: Decision Trees, Behavior Trees, and Learning
 
 ## Overview
-This project demonstrates the implementation of decision trees, behavior trees, and decision tree learning for AI in games. The application builds on the movement and pathfinding code from Homework 2 and 3, adding higher-level decision making.
+This project implements decision trees, behavior trees, and decision tree learning for game AI, building upon previous movement and pathfinding work. It features autonomous agents making decisions in an indoor environment with multiple rooms.
 
 ## Features
-- **Decision Trees**: Manual implementation of decision trees for agent behavior
-- **Behavior Trees**: Implementation of behavior trees with various node types
-- **Decision Tree Learning**: Learning decision trees from behavior data
-- **Comparative Analysis**: Tools to compare the effectiveness of the different approaches
+- Decision trees for autonomous agent behavior
+- Behavior trees with various node types
+- Decision tree learning from behavior data
+- Comparative performance analysis
 
-## Project Structure
-- `headers/` - Header files
-  - `DecisionTree.h` - Decision tree implementation
-  - `BehaviorTree.h` - Behavior tree implementation
-  - `Monster.h` - Monster entity controlled by AI
-  - `DTLearning.h` - Decision tree learning algorithm
-  - `LearnedDecisionTree.h` - Implementation of a decision tree based on learned data
-  - Various headers from HW2 and HW3
-- `source/` - Source files
-  - `DecisionTree.cpp`
-  - `BehaviorTree.cpp`
-  - `Monster.cpp`
-  - `DTLearning.cpp`
-  - Various source files from HW2 and HW3
-- `hw4.cpp` - Main application
-- `Makefile` - Build configuration
-
-## Building the Project
-To build the project, run:
+## Building and Running
+Run the following commands in the terminal from the project directory to produce and run the `hw4` executable:
 ```
-make
-```
-
-This will compile all source files and create the executable `hw4`.
-
-## Running the Project
-To run the project, execute:
-```
-./hw4
-```
-
-## **Cleanup**
-To clean the project, run this command:
-```
-make clean
+make        # Build the project
+./hw4       # Run the application
+make clean  # Clean build files
 ```
 
 ## Controls
-- **Left-click**: Set player destination
 - **R**: Reset positions
 - **1**: Record behavior tree data (toggle)
 - **2**: Learn decision tree from recorded data
-- **3**: Toggle monster type (behavior tree, decision tree, or both)
+- **3**: Toggle monsters (behavior tree, decision tree, or both)
 - **ESC**: Exit application
 
-## Implementation Details
+## Implementation
+- **Decision Trees**: Provides autonomous behavior based on environment state (distance, velocity, obstacles, visibility)
+- **Behavior Trees**: Includes sequence nodes, selector nodes, decorators, random selectors, and parallel nodes
+- **Decision Tree Learning**: Uses ID3 algorithm to learn from recorded behavior data
 
-### Decision Tree
-The decision tree implementation allows agents to make decisions based on environmental conditions such as:
-- Distance to the player
-- Current velocity
-- Whether obstacles are nearby
-- Whether the player is visible
-- Time spent in current state
-
-Actions controlled by the decision tree include:
-- Path finding to the player
-- Wandering
-- Dancing
-- Idling
-
-### Behavior Tree
-The behavior tree implementation includes several node types:
-
-- **Sequence Nodes:** Execute children in order until one fails (AND logic)
-- **Selector Nodes:** Try children in order until one succeeds (OR logic)
-- **Decorator Nodes:** Modify the behavior of their child nodes (Inverter, Repeater)
-- **Random Selector:** Randomly selects a child to execute
-- **Parallel Nodes:** Execute all children simultaneously
-
-The monster's behavior tree includes logic for:
-- Chasing the player when visible
-- Wandering when no other actions are available
-- Fleeing from obstacles
-- Occasionally performing a dance
-
-### Decision Tree Learning
-The decision tree learning implementation uses the ID3 algorithm to learn a decision tree from recorded behavior data. The algorithm:
-1. Calculates entropy and information gain for each attribute
-2. Selects the attribute with the highest information gain
-3. Recursively builds subtrees for each value of the selected attribute
+## Experiment
+The application allows recording behavior tree actions, learning a decision tree from this data, and comparing performance between the original and learned behaviors using metrics like catch count and time.
 
 ## Author
 Miles Hollifield
