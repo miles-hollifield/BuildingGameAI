@@ -156,7 +156,7 @@ public:
      * Suggest an algorithm or method to do this efficiently."
      * The response was modified to fit the context of the code.
      */
-    bool hasLineOfSight(const sf::Vector2f &from, const sf::Vector2f &to)
+    bool hasLineOfSight(const sf::Vector2f &from, const sf::Vector2f &to) const
     {
         // Check if the line between from and to intersects with any obstacles
         float distanceX = std::abs(to.x - from.x);

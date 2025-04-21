@@ -4,7 +4,13 @@
  *
  * Resources Used:
  * - Book: "Artificial Intelligence for Games" by Ian Millington
- * - Book: "Game AI Pro" edited by Steve Rabin
+ * - AI Tools: OpenAI's ChatGPT
+ *
+ * OpenAI's ChatGPT was used to suggest a template header file for Monster's
+ * implementation. The following prompt was used: "Create a template header file
+ * for a monster class in C++ that includes properties for position, velocity, orientation,
+ * and methods for movement and behavior control."
+ * The code provided by ChatGPT was modified to fit the context of the project.
  *
  * Author: Miles Hollifield
  * Date: 4/7/2025
@@ -28,6 +34,7 @@
 // Forward declarations
 class BehaviorTree;
 class DecisionTree;
+class EnvironmentState;
 
 /**
  * @class Monster
@@ -108,13 +115,16 @@ public:
     const Kinematic &getKinematic() const;
 
     /**
+     * @brief Get the environment reference
+     * @return Reference to the environment
+     */
+    const Environment &getEnvironment() const { return environment; }
+
+    /**
      * @brief Get the player's kinematic data
      * @return Const reference to the player's kinematic data
      */
-    const Kinematic &getPlayerKinematic() const
-    {
-        return *playerKinematic;
-    }
+    const Kinematic &getPlayerKinematic() const { return *playerKinematic; }
 
     /**
      * @brief Execute a specific action
@@ -130,10 +140,64 @@ public:
     bool hasCaughtPlayer() const;
 
     /**
+     * @brief Check if the monster has line of sight to a target
+     * @param target Target position to check
+     * @return True if there's a clear line of sight
+     */
+    bool hasLineOfSightTo(const sf::Vector2f &target) const;
+
+    /**
      * @brief Record the current state and action to a file
      * @param outputFile Output stream to write to
      */
     void recordStateAction(std::ofstream &outputFile);
+
+    /**
+     * @brief Set and get the current delta time (for behavior tree actions)
+     */
+    void setDeltaTime(float deltaTime) { currentDeltaTime = deltaTime; }
+    float getDeltaTime() const { return currentDeltaTime; }
+
+    /**
+     * @brief Set the monster's orientation
+     * @param orientation New orientation in degrees
+     */
+    void setOrientation(float orientation) { monsterKinematic.orientation = orientation; }
+
+    /**
+     * @brief Get whether the monster is currently dancing
+     */
+    bool getIsDancing() const { return isDancing; }
+
+    /**
+     * @brief Get the current path count (for decision tree learning)
+     * @return Number of waypoints in the current path
+     */
+    int getPathCount() const { return currentPath.size(); }
+
+    /**
+     * @brief Check if the monster has an active path
+     * @return True if the monster has a non-empty path
+     */
+    bool hasActivePath() const { return !currentPath.empty(); }
+
+    /**
+     * @brief Get the time spent in the current action
+     * @return Time in seconds
+     */
+    float getTimeInCurrentAction() const { return timeInCurrentAction; }
+
+    /**
+     * @brief Get the current action
+     * @return String representation of the current action
+     */
+    std::string getCurrentAction() const { return currentAction; }
+
+    /**
+     * @brief Create an environment state for this monster
+     * @return Shared pointer to an environment state object
+     */
+    std::shared_ptr<EnvironmentState> createEnvironmentState();
 
 private:
     // Entity data
@@ -160,6 +224,7 @@ private:
     ControlType controlType;
     std::shared_ptr<BehaviorTree> behaviorTree;
     std::shared_ptr<DecisionTree> decisionTree;
+    float currentDeltaTime;
 
     // State tracking
     std::string currentAction;
@@ -170,6 +235,7 @@ private:
     std::vector<sf::Vector2f> dancePath;
     bool isDancing;
     float danceTimer;
+    int dancePhase;
 
     // Helper methods
     void pathfindToPlayer();
@@ -177,12 +243,18 @@ private:
     void followPath(float deltaTime);
     void doDance(float deltaTime);
     void updateSprite();
+    void flee(float deltaTime);
+
+    // Collision handling
+    bool checkCollision(sf::Vector2f proposedPosition) const;
+    sf::Vector2f findValidMovement(sf::Vector2f currentPos, sf::Vector2f proposedPos) const;
 
     // Breadcrumb trail for visualization
     std::deque<sf::CircleShape> breadcrumbs;
     int breadcrumbCounter;
-    static constexpr int BREADCRUMB_INTERVAL = 15;
-    static constexpr int MAX_BREADCRUMBS = 30;
+    sf::Color breadcrumbColor;
+    static constexpr int BREADCRUMB_INTERVAL = 120; // More frequent breadcrumbs than before
+    static constexpr int MAX_BREADCRUMBS = 30;      // Store more breadcrumbs
     void dropBreadcrumb();
 };
 
